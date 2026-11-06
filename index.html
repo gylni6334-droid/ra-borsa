@@ -1,0 +1,2705 @@
+<!DOCTYPE html>
+<html lang="tr" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Mini App - Pro Borsa & Yüksek Adalet Sarayı</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: #070b14;
+            --card-bg: #111827;
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-color: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --danger-color: #ef4444;
+            --success-color: #22c55e;
+            --star-color: #facc15;
+            --court-color: #a855f7;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            position: relative;
+            padding-bottom: 85px;
+        }
+
+        /* ÖZEL TOAST BİLDİRİM BALONU */
+        #custom-toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--star-color);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 12px;
+            z-index: 9999;
+            font-size: 0.88rem;
+            font-weight: 700;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            max-width: 90%;
+            text-align: center;
+        }
+        #custom-toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ÜST HEADER KISMI */
+        header {
+            padding: 14px 18px;
+            background: rgba(13, 19, 33, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        #header-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            color: #fff;
+            background: linear-gradient(135deg, #fff, var(--accent-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .user-balance-box { display: flex; align-items: center; gap: 8px; }
+        
+        .user-balance {
+            background: rgba(250, 204, 21, 0.12);
+            border: 1px solid rgba(250, 204, 21, 0.3);
+            color: var(--star-color);
+            padding: 6px 10px;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .add-stars-btn {
+            background: var(--star-color);
+            color: #070b14;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+        .add-stars-btn:active { transform: scale(0.95); }
+
+        .admin-btn {
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            color: var(--accent-color);
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-weight: 700;
+            display: none;
+            transition: background 0.2s;
+        }
+        .admin-btn:hover { background: rgba(56, 189, 248, 0.25); }
+
+        /* ANA İÇERİK */
+        main { padding: 16px; flex: 1; max-width: 600px; margin: 0 auto; width: 100%; position: relative; z-index: 10; background-color: var(--bg-color); }
+        .app-screen { display: none !important; }
+        .app-screen.active { display: block !important; }
+
+        /* GİRİŞ & KAYIT */
+        .auth-container { text-align: center; padding: 20px 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 75vh; background-color: var(--bg-color); }
+        
+        .auth-box {
+            width: 100%;
+            background: var(--card-bg);
+            padding: 22px;
+            border-radius: 18px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            text-align: left;
+        }
+
+        .auth-box label { font-size: 0.78rem; color: var(--accent-color); font-weight: 700; letter-spacing: 0.3px; }
+        
+        .auth-box input, .auth-box textarea, .auth-box select {
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(0,0,0,0.4);
+            color: #fff;
+            width: 100%;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .auth-box input:focus, .auth-box textarea:focus, .auth-box select:focus { border-color: var(--accent-color); }
+        .auth-box select option { background: #111827; color: #fff; }
+
+        .remember-box { display: flex; align-items: center; gap: 10px; font-size: 0.82rem; color: #cbd5e1; margin-top: 4px; }
+        
+        .enter-app-btn {
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+            color: #070b14;
+            border: none;
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+            margin-top: 6px;
+            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.25);
+            transition: transform 0.1s;
+        }
+        .enter-app-btn:active { transform: scale(0.98); }
+
+        .switch-auth-link { margin-top: 18px; font-size: 0.85rem; color: var(--accent-color); cursor: pointer; text-decoration: underline; font-weight: 600; }
+
+        /* BİLDİRİM VE UYARI ÇUBUKLARI */
+        #user-notification-box {
+            background: #111827;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--text-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        /* İSTATİSTİK GRID */
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
+        
+        .stat-card {
+            background: var(--card-bg);
+            padding: 14px;
+            border-radius: 14px;
+            border: 1px solid var(--card-border);
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .stat-card h4 { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card p { font-size: 1.15rem; font-weight: 800; color: var(--star-color); }
+
+        /* ANA MENÜ KARTLARI */
+        .window-card {
+            background: var(--card-bg);
+            border-radius: 14px;
+            padding: 16px 18px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+            cursor: pointer;
+            margin-bottom: 12px;
+            transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+        .window-card:active { transform: scale(0.98); }
+        .window-card h3 { color: var(--accent-color); font-size: 0.98rem; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; font-weight: 700; }
+        .event-img { width: 100%; max-height: 180px; object-fit: cover; border-radius: 10px; margin-top: 10px; }
+
+        /* MAHKEME & BANNERLAR */
+        .court-banner {
+            background: linear-gradient(135deg, #581c87, #7e22ce);
+            padding: 16px 18px;
+            border-radius: 14px;
+            border: 1px solid rgba(168, 85, 247, 0.4);
+            margin-bottom: 12px;
+            text-align: center;
+            box-shadow: 0 6px 20px rgba(126, 34, 206, 0.25);
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .court-banner:active { transform: scale(0.98); }
+
+        .settings-banner {
+            background: linear-gradient(135deg, #0369a1, #0284c7);
+            padding: 16px 18px;
+            border-radius: 14px;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            margin-bottom: 12px;
+            text-align: center;
+            box-shadow: 0 6px 20px rgba(2, 132, 199, 0.25);
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .settings-banner:active { transform: scale(0.98); }
+
+        .wallet-banner {
+            background: linear-gradient(135deg, #15803d, #16a34a);
+            padding: 16px 18px;
+            border-radius: 14px;
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            margin-bottom: 12px;
+            text-align: center;
+            box-shadow: 0 6px 20px rgba(22, 163, 74, 0.25);
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .wallet-banner:active { transform: scale(0.98); }
+
+        /* LİSTE KARTLARI VE PİYASA */
+        .item-list { display: flex; flex-direction: column; gap: 10px; }
+        
+        .card {
+            background-color: var(--card-bg);
+            padding: 14px 16px;
+            border-radius: 14px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: border-color 0.2s;
+        }
+        .card:active { transform: scale(0.99); }
+        .card-info h3 { margin-bottom: 4px; color: var(--accent-color); font-size: 0.95rem; font-weight: 700; }
+        .card-info p { font-size: 0.78rem; color: var(--text-muted); }
+        .crypto-price { text-align: right; }
+        .crypto-price .price { font-weight: 800; font-size: 0.95rem; color: var(--star-color); }
+        .crypto-price .change { font-size: 0.75rem; font-weight: 600; margin-top: 2px; }
+        .change.pos { color: var(--success-color); }
+        .change.neg { color: var(--danger-color); }
+
+        /* CANLI GRAFİK */
+        .live-chart-box {
+            width: 100%;
+            height: 140px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 12px;
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            padding: 12px;
+            margin: 14px 0;
+            overflow: hidden;
+            position: relative;
+        }
+        .chart-bar { width: 6%; background: var(--accent-color); border-radius: 4px 4px 0 0; transition: height 0.4s ease; }
+
+        /* CHAT & DESTEK */
+        .chat-box {
+            background: var(--card-bg);
+            border-radius: 14px;
+            border: 1px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            height: 62vh;
+            padding: 14px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        .chat-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; margin-bottom: 12px; }
+        
+        .chat-msg {
+            background: rgba(255,255,255,0.04);
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            max-width: 85%;
+            border: 1px solid rgba(255,255,255,0.03);
+        }
+        .chat-msg.support-alert { border-left: 3px solid var(--danger-color); background: rgba(239, 68, 68, 0.08); }
+        .chat-msg .sender-line { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+        .chat-msg .sender { font-size: 0.75rem; color: var(--accent-color); font-weight: 700; }
+        .msg-title-badge { background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.35); color: var(--star-color); font-size: 0.62rem; padding: 1px 6px; border-radius: 4px; font-weight: 700; }
+
+        .chat-input-area { display: flex; gap: 8px; }
+        .chat-input-area input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.4); color: #fff; font-size: 0.88rem; outline: none; }
+        .chat-input-area button { background: var(--accent-color); color: #070b14; border: none; padding: 0 16px; border-radius: 10px; font-weight: 800; cursor: pointer; transition: transform 0.1s; }
+        .chat-input-area button:active { transform: scale(0.95); }
+
+        /* 3D ÇARK VE OYUN */
+        .wheel-container { perspective: 1000px; text-align: center; margin: 15px 0; }
+        .wheel-3d {
+            width: 200px; height: 200px; margin: 0 auto; border-radius: 50%;
+            background: conic-gradient(#facc15 0deg 60deg, #38bdf8 60deg 120deg, #22c55e 120deg 180deg, #a855f7 180deg 240deg, #ef4444 240deg 300deg, #fb923c 300deg 360deg);
+            border: 5px solid #fff; box-shadow: 0 0 25px rgba(250, 204, 21, 0.4);
+            transition: transform 4s cubic-bezier(0.15, 0.95, 0.15, 1);
+            transform-style: preserve-3d; position: relative;
+        }
+        .wheel-pointer { width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-bottom: 24px solid #fff; margin: -10px auto 10px auto; position: relative; z-index: 10; }
+
+        .game-sky-box { width: 100%; height: 260px; background: linear-gradient(to bottom, #1e3a8a, #38bdf8); border-radius: 12px; position: relative; overflow: hidden; border: 2px solid var(--star-color); margin-top: 10px; box-shadow: inset 0 0 20px rgba(0,0,0,0.3); }
+        .game-ground { position: absolute; bottom: 0; width: 100%; height: 50px; background: #166534; border-top: 3px solid #22c55e; }
+        .game-bucket { position: absolute; bottom: 10px; left: 140px; font-size: 2.2rem; transition: left 0.05s linear; user-select: none; }
+        .falling-star { position: absolute; top: 0; font-size: 1.8rem; user-select: none; }
+        .game-controls { display: flex; justify-content: space-between; gap: 10px; margin-top: 12px; }
+        .game-ctrl-btn { flex: 1; background: var(--accent-color); color: #070b14; border: none; padding: 12px; border-radius: 10px; font-weight: 800; font-size: 1.2rem; cursor: pointer; box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2); }
+        .game-ctrl-btn:active { transform: scale(0.96); }
+
+        /* PAKETLER & ADMIN SECT */
+        .package-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+        .pkg-btn { background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); color: var(--text-color); padding: 10px; border-radius: 8px; font-weight: 700; cursor: pointer; text-align: center; font-size: 0.85rem; transition: background 0.2s; }
+        .pkg-btn:hover { background: rgba(56, 189, 248, 0.25); }
+
+        .admin-section {
+            background: var(--card-bg);
+            padding: 16px;
+            border-radius: 14px;
+            margin-bottom: 14px;
+            border: 1px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .admin-section input, .admin-section textarea, .admin-section select { padding: 11px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.3); color: #fff; width: 100%; font-size: 0.85rem; outline: none; }
+        .admin-section button { background: var(--accent-color); color: #070b14; border: none; padding: 11px; border-radius: 8px; font-weight: 800; cursor: pointer; transition: transform 0.1s; }
+        .admin-section button:active { transform: scale(0.98); }
+
+        .back-btn { background: var(--accent-color); color: #070b14; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 800; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2); }
+        .back-btn:active { transform: scale(0.96); }
+
+        /* FATURA VE DEKONT STİLLERİ (KAŞELİ VE İMZALI) */
+        .invoice-card { background: rgba(0,0,0,0.35); border: 1px solid rgba(250, 204, 21, 0.3); border-radius: 12px; padding: 14px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .invoice-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; color: var(--star-color); font-weight: 800; }
+        .invoice-link { font-size: 0.78rem; color: var(--accent-color); text-decoration: underline; cursor: pointer; word-break: break-all; }
+        .add-to-court-btn { background: var(--court-color); color: #fff; border: none; padding: 8px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; margin-top: 4px; text-align: center; box-shadow: 0 4px 10px rgba(168, 85, 247, 0.25); }
+        .add-to-court-btn:active { transform: scale(0.97); }
+
+        .receipt-box { background: #0b1120; border: 2px dashed var(--star-color); padding: 20px; border-radius: 14px; text-align: left; font-size: 0.88rem; display: flex; flex-direction: column; gap: 10px; max-height: 80vh; overflow-y: auto; color: #f8fafc; }
+        .receipt-box h3 { color: var(--star-color); text-align: center; margin-bottom: 6px; font-size: 1.15rem; font-weight: 800; }
+        .receipt-row { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px; }
+        .receipt-row span:last-child { font-weight: 700; color: var(--accent-color); }
+
+        /* RESMİ KAŞE VE İMZA ALANI */
+        .official-stamp-box {
+            margin-top: 12px;
+            padding: 12px;
+            border: 2px dashed var(--success-color);
+            background: rgba(34, 197, 94, 0.05);
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .stamp-badge {
+            transform: rotate(-10deg);
+            border: 2px solid var(--success-color);
+            color: var(--success-color);
+            padding: 6px 12px;
+            font-weight: 900;
+            font-size: 0.8rem;
+            border-radius: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: rgba(34, 197, 94, 0.12);
+        }
+        .signature-area {
+            text-align: right;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .signature-area .sign-name {
+            font-family: 'Brush Script MT', cursive, sans-serif;
+            font-size: 1.1rem;
+            color: var(--star-color);
+            font-weight: bold;
+        }
+
+        /* PERMISSIONS CHECKBOX STYLES */
+        .perm-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; background: rgba(0,0,0,0.25); padding: 12px; border-radius: 10px; border: 1px solid var(--card-border); }
+        .perm-item { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #cbd5e1; cursor: pointer; font-weight: 600; }
+        .perm-item input { width: auto; cursor: pointer; }
+
+        /* ALT SABİT MENÜ (TAB BAR) */
+        .tab-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(7, 11, 20, 0.95);
+            border-top: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 4px 12px 4px;
+            z-index: 100;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.4);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.62rem;
+            font-weight: 700;
+            cursor: pointer;
+            flex: 1;
+            padding: 4px 0;
+            transition: color 0.2s, transform 0.1s;
+        }
+        .tab-btn span:first-child { font-size: 1.15rem; }
+        .tab-btn.active-tab { color: var(--accent-color); }
+        .tab-btn:active { transform: scale(0.92); }
+
+        /* MODALLAR */
+        .fullscreen-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(7, 11, 20, 0.98); z-index: 2000; display: flex; justify-content: center; align-items: center; padding: 20px; display: none; }
+        .fullscreen-modal.show { display: flex; }
+        .fullscreen-content { background: var(--card-bg); width: 100%; max-width: 500px; border-radius: 20px; padding: 25px; position: relative; text-align: center; border: 2px solid var(--star-color); box-shadow: 0 0 40px rgba(250, 204, 21, 0.25); }
+        .close-fullscreen { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.12); border: none; color: #fff; width: 34px; height: 34px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 1000; display: none; }
+        .modal-overlay.show { display: flex; }
+        .modal-content { background-color: var(--card-bg); width: 92%; max-width: 450px; border-radius: 18px; padding: 22px; position: relative; max-height: 85vh; overflow-y: auto; border: 1px solid var(--card-border); box-shadow: 0 10px 35px rgba(0,0,0,0.5); color: #f8fafc; }
+        .close-modal { position: absolute; top: 14px; right: 16px; background: rgba(255,255,255,0.1); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body>
+
+    <!-- ÖZEL MODERN TOAST BİLDİRİM BALONU -->
+    <div id="custom-toast">
+        <span id="toast-icon">✨</span>
+        <span id="toast-text">Bildirim mesajı buraya gelecek</span>
+    </div>
+
+    <header id="app-header" style="display: none;">
+        <span id="header-title">RA Borsa</span>
+        <div class="user-balance-box">
+            <div class="user-balance">⭐ <span id="user-stars">0</span></div>
+            <button class="add-stars-btn" onclick="openTopUpModal()">+ Yükle / Çek</button>
+        </div>
+        <button class="admin-btn" onclick="openAdminPanel()" id="btn-admin-panel">🛡️ CEO & Yönetim</button>
+    </header>
+
+    <main>
+        <!-- GİRİŞ EKRANI -->
+        <div id="screen-login" class="app-screen auth-container active">
+            <div style="font-size: 2rem; font-weight: 900; color: #ffffff; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px;">RA BORSA</div>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Giriş Yap veya Hızlıca CEO Olarak Başla</p>
+            <div class="auth-box">
+                <button onclick="loginAsCEO()" style="background: linear-gradient(135deg, var(--star-color), #f59e0b); color: #070b14; border: none; width: 100%; padding: 14px; border-radius: 12px; font-size: 1rem; font-weight: 900; cursor: pointer; margin-bottom: 6px; box-shadow: 0 4px 15px rgba(250, 204, 21, 0.3);">🚀 CEO Girişi (Hızlı)</button>
+                
+                <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0;">
+
+                <label>Kullanıcı Adı veya Gmail:</label>
+                <input type="text" id="login-user" placeholder="Kullanıcı adınız">
+                <label style="margin-top: 4px;">Şifre:</label>
+                <input type="password" id="login-pass" placeholder="Şifreniz">
+                <div class="remember-box">
+                    <input type="checkbox" id="remember-me-chk" style="width: auto; transform: scale(1.1);">
+                    <label for="remember-me-chk" style="color: #cbd5e1; cursor: pointer; font-size: 0.82rem;">Beni Hatırla (Şifre sorma)</label>
+                </div>
+                <button class="enter-app-btn" onclick="handleLogin()">Giriş Yap 🚀</button>
+            </div>
+            <span class="switch-auth-link" onclick="switchAuthMode('register')">Hesabın yok mu? Hemen Kayıt Ol</span>
+        </div>
+
+        <!-- KAYIT EKRANI -->
+        <div id="screen-register" class="app-screen auth-container">
+            <div style="font-size: 2rem; font-weight: 900; color: #ffffff; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px;">RA BORSA</div>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Yeni Hesap Oluştur</p>
+            <div class="auth-box">
+                <label>Gmail Adresi:</label>
+                <input type="email" id="reg-email" placeholder="ornek@gmail.com">
+                <label style="margin-top: 4px;">Kullanıcı Adı:</label>
+                <input type="text" id="reg-username" placeholder="Rumuzunuz">
+                <label style="margin-top: 4px;">Şifre:</label>
+                <input type="password" id="reg-pass" placeholder="Şifreniz">
+                <label style="margin-top: 4px;">Biyografi / Profil Özeti:</label>
+                <textarea id="reg-bio" placeholder="Kendinizden kısaca bahsedin..." rows="2"></textarea>
+                <button class="enter-app-btn" onclick="handleRegister()">Kayıt Ol ve Başla 🚀</button>
+            </div>
+            <span class="switch-auth-link" onclick="switchAuthMode('login')">Zaten hesabın var mı? Giriş Yap</span>
+        </div>
+
+        <!-- ANA MENÜ -->
+        <div id="screen-main" class="app-screen">
+            <div id="tab-home" class="tab-content">
+                <div id="user-notification-box" style="display:none;"></div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>Toplam Kullanıcı</h4>
+                        <p id="stat-total-users">1</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Aktif Kullanıcı</h4>
+                        <p id="stat-active-users">1</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Bot Yatırım</h4>
+                        <p id="stat-topup-count">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Bot Çekim</h4>
+                        <p id="stat-withdraw-count">0</p>
+                    </div>
+                </div>
+
+                <div class="window-card" onclick="switchTab('crypto', document.querySelectorAll('.tab-btn')[1])" style="border: 2px solid var(--star-color);">
+                    <h3 style="color: var(--star-color);">📈 Volatil Mega Kripto Piyasası <span>➔</span></h3>
+                    <p style="font-size: 0.85rem; color: #cbd5e1; margin-top: 4px;">Sert dalgalanan canlı hisse ve kriptolar!</p>
+                </div>
+
+                <div class="window-card" onclick="openFullscreenAnnouncement()">
+                    <h3>📢 Son Duyurular & Reklamlar <span>➔</span></h3>
+                    <p id="home-announcement-preview" style="font-size: 0.85rem; color: #cbd5e1; margin-top: 4px;">Yükleniyor...</p>
+                </div>
+
+                <div class="window-card" onclick="switchTab('livechat', document.querySelectorAll('.tab-btn')[3])" style="border: 2px solid var(--accent-color);">
+                    <h3 style="color: var(--accent-color);">💬 Canlı Destek & Sohbet Odası <span>➔</span></h3>
+                    <p style="font-size: 0.85rem; color: #cbd5e1; margin-top: 4px;">Yardım için mesajına <b>@destek</b> yaz!</p>
+                </div>
+
+                <div class="window-card" onclick="switchTab('events', document.querySelectorAll('.tab-btn')[5])" style="border: 2px solid var(--success-color);">
+                    <h3 style="color: var(--success-color);">🎉 Etkinlikler & Oyunlar (Kova Oyunu) <span>➔</span></h3>
+                    <p style="font-size: 0.85rem; color: #cbd5e1; margin-top: 4px;">Yıldız topla, ödülleri kap!</p>
+                </div>
+
+                <div class="window-card" onclick="switchTab('wheel', document.querySelectorAll('.tab-btn')[6])" style="border: 2px solid var(--star-color);">
+                    <h3 style="color: var(--star-color);">🎡 Günlük 3D Çark (Max 10 Yıldız) <span>➔</span></h3>
+                    <p style="font-size: 0.85rem; color: #cbd5e1; margin-top: 4px;">Her gün çevir, yıldızları cebe at!</p>
+                </div>
+
+                <div class="wallet-banner" onclick="switchTab('wallet', document.querySelectorAll('.tab-btn')[4])">
+                    <h3 style="color: #f0fdf4; font-size: 1.05rem; justify-content: space-between; display: flex; align-items: center;">💳 Cüzdan & Kimlik Kodu Merkezi <span>➔</span></h3>
+                    <p style="font-size: 0.82rem; color: #bbf7d0; margin-top: 4px;">Cüzdan kimlik kodunla dış botlardan gelen yıldızları yönet ve %5 kesintiyle Telegram'a çek!</p>
+                </div>
+
+                <div class="settings-banner" onclick="switchTab('settings', document.querySelectorAll('.tab-btn')[8] || null)">
+                    <h3 style="color: #f0f9ff; font-size: 1.05rem; justify-content: space-between; display: flex; align-items: center;">💼 Çalışmak İstiyorum (İş Başvurusu) <span>➔</span></h3>
+                    <p style="font-size: 0.82rem; color: #bae6fd; margin-top: 4px;">Şirket bünyesinde personel veya avukat olarak çalışmak için başvur!</p>
+                </div>
+
+                <div class="court-banner" onclick="switchTab('court', document.querySelectorAll('.tab-btn')[7])">
+                    <h3 style="color: #f3e8ff; font-size: 1.05rem; justify-content: space-between; display: flex; align-items: center;">⚖️ Yüksek Adalet Sarayı (Mahkeme) <span>➔</span></h3>
+                    <p style="font-size: 0.82rem; color: #d8b4fe; margin-top: 4px;">Dava sorgulama, aktif duruşmalar ve celse arşivi!</p>
+                </div>
+            </div>
+
+            <!-- MEGA KRİPTO PİYASASI -->
+            <div id="tab-crypto" class="tab-content" style="display: none;">
+                <h3 style="color: var(--star-color); margin-bottom: 12px; font-size: 1.05rem;">🪙 Canlı Volatil Piyasalar</h3>
+                <div id="crypto-list" class="item-list"></div>
+            </div>
+
+            <!-- VARLIKLARIM VE FATURALARIM -->
+            <div id="tab-assets" class="tab-content" style="display: none;">
+                <h3 style="color: var(--star-color); margin-bottom: 12px; font-size: 1.05rem;">💰 Cüzdan Varlıklarım & İşlem Faturalarım</h3>
+                <div id="assets-list" class="item-list"></div>
+            </div>
+
+            <!-- CÜZDAN & KİMLİK KODU MERKEZİ -->
+            <div id="tab-wallet" class="tab-content" style="display: none;">
+                <div class="wallet-banner" style="margin-bottom: 15px;">
+                    <h3 style="color: #f0fdf4; font-size: 1.1rem; justify-content: center;">💳 Cüzdan Kimlik Kodu Merkezi</h3>
+                    <p style="font-size: 0.82rem; color: #bbf7d0; margin-top: 6px;">Yarın öbür gün kuracağın farklı oyun botlarına bu cüzdan kimlik kodunu ekleyerek kazandığın yıldızların cüzdanında toplanmasını sağlayabilirsin!</p>
+                </div>
+
+                <!-- CÜZDAN KİMLİK KODU KARTI -->
+                <div class="admin-section" style="border: 1px solid var(--star-color); text-align: center;">
+                    <h3 style="color: var(--star-color); font-size: 0.98rem; margin-bottom:4px;">🔑 Senin Cüzdan Kimlik Kodun (API / Wallet ID)</h3>
+                    <p style="font-size: 0.75rem; color: #cbd5e1; margin-bottom: 10px;">Diğer oyun botlarının kodlarında bu kimliği kullanacaksın.</p>
+                    
+                    <div style="background: rgba(0,0,0,0.5); padding: 12px; border-radius: 10px; border: 1px dashed var(--star-color); font-size: 1.1rem; font-weight: 900; color: var(--star-color); letter-spacing: 1px; margin-bottom: 10px;" id="wallet-api-id-display">
+                        Yükleniyor...
+                    </div>
+                    <button onclick="copyWalletId()" style="background: var(--star-color); color: #070b14; font-weight: 900; padding: 10px; border-radius: 8px; border: none; cursor: pointer; width: 100%;">Cüzdan Kodunu Kopyala 📋</button>
+                </div>
+
+                <div class="admin-section" style="border: 1px solid var(--star-color);">
+                    <h3 style="color: var(--star-color); font-size: 0.98rem;">📤 Cüzdandan Telegram'a Çekim (%5 Komisyonlu)</h3>
+                    <p style="font-size: 0.75rem; color: #cbd5e1; margin-bottom: 8px;">Bu cüzdandaki yıldızları çekmek için yatırım kuralı (yönetici ayarına göre) değişebilir. Sistem otomatik olarak %5 kesinti yapar ve kalanı Telegram hesabınıza gönderir.</p>
+                    
+                    <label style="font-size:0.75rem; color:var(--star-color); font-weight:bold; margin-top:4px;">Çekilecek Miktar (⭐):</label>
+                    <input type="number" id="wallet-withdraw-amount" placeholder="Miktar (min 10)..." min="10" oninput="calculateWalletWithdraw()" style="margin-bottom:6px;">
+                    <p id="wallet-withdraw-calc" style="font-size: 0.78rem; color: var(--accent-color); font-weight: bold; margin-bottom: 8px;"></p>
+
+                    <button onclick="withdrawFromWallet()" style="background: var(--star-color); color: #070b14; font-weight: 900;">Telegram'a Komisyonlu Çek 🚀</button>
+                </div>
+            </div>
+
+            <!-- CANLI DESTEK -->
+            <div id="tab-livechat" class="tab-content" style="display: none;">
+                <h3 style="color: var(--accent-color); margin-bottom: 6px; font-size: 1.05rem;">💬 Genel Sohbet & Canlı Destek (@destek)</h3>
+                <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px;">Destek ekibini çağırmak için mesajına <b>@destek</b> yaz!</p>
+                <div class="chat-box">
+                    <div class="chat-messages" id="live-chat-messages"></div>
+                    <div class="chat-input-area">
+                        <input type="text" id="chat-input-text" placeholder="Mesajınızı yazın...">
+                        <button onclick="sendChatMessage()">Gönder</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADMINLER ODASI -->
+            <div id="tab-adminroom" class="tab-content" style="display: none;">
+                <h3 style="color: var(--star-color); margin-bottom: 10px; font-size: 1.05rem;">🛡️ CEO & Yönetim Odası</h3>
+                <div class="chat-box" style="border-color: var(--star-color);">
+                    <div class="chat-messages" id="admin-chat-messages"></div>
+                    <div class="chat-input-area">
+                        <input type="text" id="admin-chat-input" placeholder="CEO / Yönetim mesajı yazın...">
+                        <button onclick="sendAdminRoomMessage()" style="background:var(--star-color); color:#070b14;">Gönder</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ETKİNLİKLER VE OYUNLAR -->
+            <div id="tab-events" class="tab-content" style="display: none;">
+                <h3 style="color: var(--success-color); margin-bottom: 12px; font-size: 1.05rem;">🎉 Aktif Etkinlikler & Oyunlar</h3>
+                <div id="events-list" class="item-list"></div>
+            </div>
+
+            <!-- 3D ÇARK -->
+            <div id="tab-wheel" class="tab-content" style="display: none;">
+                <div class="window-card" style="text-align: center;">
+                    <h3 style="color: var(--star-color); justify-content: center; font-size: 1.1rem; margin-bottom: 6px;">🎡 Günlük 3D Şans Çarkı</h3>
+                    <p style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 15px;">Çarkı çevir, günlük ödülünü kazan!</p>
+                    <div class="wheel-pointer"></div>
+                    <div class="wheel-container">
+                        <div class="wheel-3d" id="main-wheel-3d"></div>
+                    </div>
+                    <button onclick="spinWheel()" style="background: var(--star-color); color: #070b14; border: none; padding: 13px 28px; border-radius: 12px; font-weight: 900; font-size: 1rem; cursor: pointer; margin-top: 15px; box-shadow: 0 4px 20px rgba(250, 204, 21, 0.3);">Çarkı Çevir 🚀</button>
+                    <p id="wheel-result-text" style="margin-top: 14px; font-size: 0.95rem; font-weight: bold; color: var(--success-color);"></p>
+                </div>
+            </div>
+
+            <!-- ÇALIŞMAK İSTİYORUM (İŞ BAŞVURUSU) -->
+            <div id="tab-settings" class="tab-content" style="display: none;">
+                <div class="settings-banner" style="margin-bottom: 15px;">
+                    <h3 style="color: #f0f9ff; font-size: 1.1rem; justify-content: center;">💼 Çalışmak İstiyorum (Personel Başvuru)</h3>
+                    <p style="font-size: 0.82rem; color: #bae6fd; margin-top: 6px;">Şirketimizde görev almak için en fazla 2 branş seçerek resmi iş başvurusunda bulunabilirsin!</p>
+                </div>
+
+                <div class="admin-section" style="border: 1px solid var(--accent-color);">
+                    <h3 style="color: var(--accent-color); font-size: 0.98rem;">📝 Yeni İş Başvuru Formu</h3>
+                    <p style="font-size: 0.75rem; color: #cbd5e1; margin-bottom: 6px;">Çalışmak istediğin pozisyonu seç, en fazla 2 branş işaretle ve en az 1 iletişim kullanıcı adını gir.</p>
+
+                    <label style="font-size:0.75rem; color:var(--accent-color); font-weight:bold; margin-top:4px;">Çalışmak İstediğin Ana Pozisyon:</label>
+                    <select id="job-apply-position" style="margin-bottom:8px;">
+                        <option value="Maliye Bakanı">Maliye Bakanı (Maliye & Bütçe)</option>
+                        <option value="Avukat">Avukat (Yüksek Adalet Sarayı)</option>
+                        <option value="İK Personeli">İK Personeli (İnsan Kaynakları)</option>
+                        <option value="Piyasa Operatörü">Piyasa Operatörü / Destek</option>
+                        <option value="Etkinlik Sorumlusu">Etkinlik Sorumlusu</option>
+                    </select>
+
+                    <label style="font-size:0.75rem; color:var(--star-color); font-weight:bold; margin-top:4px;">Branşlar (En Fazla 2 Adet Seçebilirsin):</label>
+                    <div class="perm-grid" id="job-branches-grid" style="margin-bottom:8px;">
+                        <label class="perm-item"><input type="checkbox" value="Ceza Hukuku" class="job-branch-chk"> Ceza Hukuku</label>
+                        <label class="perm-item"><input type="checkbox" value="Ticaret Hukuku" class="job-branch-chk"> Ticaret Hukuku</label>
+                        <label class="perm-item"><input type="checkbox" value="Personel Yönetimi" class="job-branch-chk"> Personel Yönetimi</label>
+                        <label class="perm-item"><input type="checkbox" value="Canlı Destek" class="job-branch-chk"> Canlı Destek</label>
+                        <label class="perm-item"><input type="checkbox" value="Kripto Analitiği" class="job-branch-chk"> Kripto Analitiği</label>
+                        <label class="perm-item"><input type="checkbox" value="Maaş & Prim İşleri" class="job-branch-chk"> Maaş & Prim İşleri</label>
+                    </div>
+
+                    <label style="font-size:0.75rem; color:var(--accent-color); font-weight:bold; margin-top:4px;">İletişim Bilgileri (Telegram, Instagram veya WhatsApp'tan en az biri yeterlidir):</label>
+                    <input type="text" id="job-contact-tg" placeholder="Telegram Kullanıcı Adı" style="margin-bottom:6px;">
+                    <input type="text" id="job-contact-ig" placeholder="Instagram Kullanıcı Adı" style="margin-bottom:6px;">
+                    <input type="text" id="job-contact-wp" placeholder="WhatsApp Telefon Numarası" style="margin-bottom:8px;">
+
+                    <button onclick="submitJobApplication()" style="background: var(--accent-color); color: #070b14;">İK Kuruluna Başvuru Gönder 🚀</button>
+                </div>
+
+                <!-- İK BAŞVURU YÖNETİMİ -->
+                <div id="hr-applications-management-section" style="display:none; margin-top:15px;">
+                    <h3 style="color: var(--star-color); margin-bottom: 8px; font-size: 0.95rem;">📥 Onay Bekleyen İK İş Başvuruları (Yetkili Paneli)</h3>
+                    <div id="hr-pending-applications-list" class="item-list"></div>
+                </div>
+            </div>
+
+            <!-- MAHKEME & ADALET SARAYI -->
+            <div id="tab-court" class="tab-content" style="display: none;">
+                <div class="court-banner">
+                    <h3 style="color: var(--star-color); font-size: 1.1rem; justify-content: center;">⚖️ RA Borsa Yüksek Adalet Sarayı</h3>
+                    <p style="font-size: 0.82rem; color: #e9d5ff; margin-top: 6px;">Dava sorgulama, aktif duruşmalar ve celse arşivi!</p>
+                </div>
+
+                <!-- MAHKEME DOSYA SORGULAMA KARTI -->
+                <div class="admin-section" style="border: 1px solid var(--star-color);">
+                    <h3 style="color: var(--star-color); font-size: 0.98rem;">🔍 Dava Dosyası Sorgulama</h3>
+                    <p style="font-size:0.75rem; color:#cbd5e1; margin-bottom:6px;">Eline ulaşan dosya numarasını (Örn: MAH-FILE-...) aşağıya girerek duruşma sonucuna veya erteleme durumuna anında bakabilirsin.</p>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="court-search-file-code" placeholder="Dosya Kodu Girin..." style="margin-bottom:0;">
+                        <button onclick="searchCourtFile()" style="background:var(--star-color); color:#070b14; width:120px; font-weight:900;">Sorgula 🔎</button>
+                    </div>
+                    <div id="court-search-result-box" style="margin-top:8px; font-size:0.85rem;"></div>
+                </div>
+
+                <!-- VATANDAŞ DAVA DİLEKÇESİ YAZMA -->
+                <div class="admin-section" style="border: 1px solid var(--court-color);">
+                    <h3 style="color: var(--court-color); font-size: 0.98rem;">📝 Yeni Dava Dilekçesi Yaz (Vatandaş İsteği Gönder)</h3>
+                    <p style="font-size:0.75rem; color:#cbd5e1; margin-bottom:6px;">Kendi avukatını aşağıdan seçebilirsin. Karşı taraf avukatını CEO / Başsavcı atar.</p>
+
+                    <input type="text" id="court-lawsuit-title" placeholder="Dava Konusu (örn: Haksız Kripto Zararı)" style="margin-bottom:6px;">
+                    <textarea id="court-lawsuit-desc" placeholder="Şikayetinizi ve zarar detaylarını yazın..." rows="3" style="margin-bottom:6px;"></textarea>
+                    
+                    <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:6px;">
+                        <label style="font-size:0.75rem; color:var(--accent-color); font-weight:bold;">Kendi Avukatını Seç:</label>
+                        <select id="court-plaintiff-lawyer-select">
+                            <option value="">-- Serbest Avukat Seçin --</option>
+                        </select>
+                        
+                        <label style="font-size:0.75rem; color:var(--star-color); font-weight:bold; margin-top:4px;">Davalı / Sanık Kullanıcı Adı:</label>
+                        <input type="text" id="court-defendant-user" placeholder="Davalı kullanıcı adı">
+                    </div>
+
+                    <input type="text" id="court-evidence-link" placeholder="Delil Fatura Linki (Varlıklar/Faturalar kısmından ekle)" readonly style="background:rgba(0,0,0,0.4); color:var(--star-color); font-size:0.75rem; margin-bottom:6px;">
+                    <button onclick="submitCitizenLawsuitRequest()" style="background: var(--court-color); color: #fff; margin-top: 4px;">Mahkemeye Dava İsteği Gönder ⚖️</button>
+                </div>
+
+                <!-- CEO / YÖNETİM İÇİN DAVA İSTEKLERİ KISMI -->
+                <div id="ceo-lawsuit-requests-section" style="display:none; margin-top:15px;">
+                    <h3 style="color: var(--star-color); margin-bottom: 8px; font-size: 0.95rem;">📥 Onay Bekleyen Dava İstekleri (CEO / Başsavcı Paneli)</h3>
+                    <div id="court-pending-requests-list" class="item-list"></div>
+                </div>
+
+                <h3 style="color: var(--star-color); margin: 20px 0 8px 0; font-size: 0.95rem;">🏛️ Aktif Duruşmalar & Celseler</h3>
+                <div id="court-active-cases-list" class="item-list"></div>
+
+                <h3 style="color: var(--text-muted); margin: 20px 0 8px 0; font-size: 0.95rem;">📁 Geçmiş / Çözülen ve Ertelenen Davalar</h3>
+                <div id="court-past-cases-list" class="item-list"></div>
+            </div>
+        </div>
+
+        <!-- DETAY & CANLI İZLEME -->
+        <div id="screen-detail" class="app-screen">
+            <button class="back-btn" onclick="goBack()">← Geri Dön</button>
+            <div class="detail-box" style="background-color: var(--card-bg); padding: 20px; border-radius: 14px; border: 1px solid var(--card-border); box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                <div id="detail-header-content"></div>
+            </div>
+        </div>
+
+        <!-- ADMIN & İK MASASI -->
+        <div id="screen-admin" class="app-screen">
+            <button class="back-btn" onclick="goBack()">← Ana Menüye Dön</button>
+            <h2 style="margin-bottom: 15px; font-size: 1.25rem;">🛡️ Kurucu & CEO İstihbarat Paneli</h2>
+            
+            <!-- MANUEL TOPLU YILDIZ DAĞITIMI VE ÇEKİM KURALI BUTONLARI -->
+            <div class="admin-section" style="border: 1px solid var(--star-color); background: rgba(250, 204, 21, 0.05);" id="sec-global-star-controls">
+                <h3 style="color: var(--star-color); font-size: 0.98rem;">⭐ Manuel Toplu Yıldız & Çekim Kuralı Yönetimi</h3>
+                <p style="font-size:0.75rem; color:#cbd5e1;">İstediğin miktarı (örn: 9999) girerek herkese tek tuşla anında yıldız dağıtabilir veya çekimdeki 20 yıldız kuralını esnetebilirsin.</p>
+                
+                <label style="font-size:0.75rem; color:var(--star-color); font-weight:bold; margin-top:4px;">Dağıtılacak Yıldız Miktarı:</label>
+                <input type="number" id="admin-global-star-amount" value="20" placeholder="Miktar girin..." style="margin-bottom:6px;">
+
+                <div style="display:flex; gap:8px; margin-top:4px;">
+                    <button onclick="adminDistributeCustomStarsToEveryone()" style="flex:1; background:var(--star-color); color:#070b14; font-weight:900; padding:12px; border-radius:8px; border:none; cursor:pointer;">🎁 Herkese Girilen Yıldızı Dağıt</button>
+                    <button onclick="adminToggleWithdrawRule()" id="btn-toggle-withdraw-rule" style="flex:1; background:var(--accent-color); color:#070b14; font-weight:900; padding:12px; border-radius:8px; border:none; cursor:pointer;">🔓 Çekim Kuralını Esnet (Açık)</button>
+                </div>
+            </div>
+
+            <div class="admin-section" style="border: 1px solid var(--danger-color); display:none;" id="sec-prosecutor-ai-panel">
+                <h3 style="color: var(--danger-color); font-size: 0.98rem;">🤖 CEO İstihbarat & Şüpheli İnceleme Masası</h3>
+                <p style="font-size:0.75rem; color:#cbd5e1;">Şüpheli kişilerin üstüne tıklayarak profilini inceleyebilir, 'Profilinize bakıldı' bildirimi gönderebilir veya resen dava açabilirsin!</p>
+                <div id="prosecutor-ai-report-list" style="display:flex; flex-direction:column; gap:6px; max-height:260px; overflow-y:auto; margin-top:8px;"></div>
+            </div>
+
+            <div class="admin-section" style="border: 1px solid var(--star-color);" id="sec-salary">
+                <h3 style="color: var(--star-color); font-size: 0.98rem;">💰 Personel Maaş Listesi & Manuel Maaş Düzenleme</h3>
+                <div id="admin-salary-management-list" style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto; margin-top:6px;"></div>
+                <button onclick="distributeRankBasedSalaries()" style="background: var(--star-color); color: #070b14; font-weight: 900; margin-top:8px;">Bütün Maaşları Botla Hesaplarına Gönder 💸</button>
+            </div>
+
+            <div class="admin-section" style="border: 1px solid var(--success-color);" id="sec-events">
+                <h3 style="color: var(--success-color); font-size: 0.98rem;">🎉 Etkinlik Ekle & Sil</h3>
+                <input type="text" id="adm-ev-title" placeholder="Etkinlik Adı" style="margin-bottom:6px;">
+                <input type="text" id="adm-ev-desc" placeholder="Etkinlik Açıklaması" style="margin-bottom:6px;">
+                <input type="number" id="adm-ev-reward" placeholder="Ödül Miktarı (Yıldız)" value="2.0" style="margin-bottom:6px;">
+                <input type="text" id="adm-ev-img" placeholder="Görsel URL" style="margin-bottom:6px;">
+                <button onclick="adminAddEvent()" style="background: var(--success-color); color: #fff; margin-bottom: 10px;">Yeni Etkinlik Ekle 🚀</button>
+                <div id="admin-events-management-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+            </div>
+
+            <div class="admin-section" style="border: 1px solid var(--accent-color);" id="sec-permissions">
+                <h3 style="color: var(--accent-color); font-size: 0.98rem;">🛡️ Personel Unvan & Manuel İzin Atama</h3>
+                <input type="text" id="adm-target-user" placeholder="Kullanıcı Adı" style="margin-bottom:6px;">
+                <input type="text" id="adm-target-title" placeholder="Resmi Unvan (örn: Maliye Bakanı)" style="margin-bottom:6px;">
+                <div class="perm-grid" id="perm-checkboxes-box">
+                    <label class="perm-item"><input type="checkbox" value="events" id="perm-events"> Etkinlik Ekle/Sil</label>
+                    <label class="perm-item"><input type="checkbox" value="announcements" id="perm-announcements"> Duyuru & Reklam Yap</label>
+                    <label class="perm-item"><input type="checkbox" value="crypto" id="perm-crypto"> Piyasa Varlık Ekle</label>
+                    <label class="perm-item"><input type="checkbox" value="salary" id="perm-salary"> Maaş & Prim Dağıt</label>
+                    <label class="perm-item"><input type="checkbox" value="court" id="perm-court"> Adliye / Mahkeme Erişimi</label>
+                    <label class="perm-item"><input type="checkbox" value="permissions" id="perm-permissions"> Yetki Atama (İK Şefi)</label>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:10px;">
+                    <button onclick="adminSaveUserPermissions()" style="flex:1; background: var(--accent-color); color: #070b14;">İzinleri Kaydet ⚡</button>
+                    <button onclick="adminBanUser()" style="flex:1; background: var(--danger-color); color: #fff;">Yasakla ❌</button>
+                </div>
+                <div id="admin-users-management-list" style="display:flex; flex-direction:column; gap:6px; max-height:150px; overflow-y:auto; margin-top:8px;"></div>
+            </div>
+
+            <div class="admin-section" style="border: 1px solid var(--success-color);" id="sec-bonus">
+                <h3 style="color: var(--success-color); font-size: 0.98rem;">🎁 Manuel Prim / Ödül Dağıtımı</h3>
+                <input type="text" id="manual-bonus-user" placeholder="Kullanıcı Adı" style="margin-bottom:6px;">
+                <input type="number" id="manual-bonus-amount" placeholder="Prim Miktarı" value="25" style="margin-bottom:6px;">
+                <button onclick="sendManualBonus()" style="background: var(--success-color); color: #fff; font-weight: bold;">Prim Gönder 🎯</button>
+            </div>
+
+            <div class="admin-section" style="border: 1px solid var(--accent-color);" id="sec-announcements">
+                <h3 style="color: var(--accent-color); font-size: 0.98rem;">📢 Tam Ekran Duyuru & Reklam Yönetimi</h3>
+                <textarea id="adm-ann-text" placeholder="Duyuru veya reklam metni..." rows="2"></textarea>
+                <button onclick="adminAddAnnouncement()" style="margin-top: 6px; margin-bottom: 8px;">Duyuru Gönder 🚀</button>
+                <div id="admin-announcements-management-list" style="display:flex; flex-direction:column; gap:6px; max-height:180px; overflow-y:auto;"></div>
+            </div>
+
+            <div class="admin-section" id="sec-crypto">
+                <h3 style="font-size: 0.98rem;">🪙 Yeni Kripto Para / Şirket Hissesi Ekle</h3>
+                <input type="text" id="adm-crypto-name" placeholder="Kripto / Şirket Adı">
+                <input type="number" id="adm-crypto-price" placeholder="Fiyat (Yıldız)" value="150">
+                <input type="text" id="adm-crypto-desc" placeholder="Kısa Açıklama">
+                <button onclick="adminAddCrypto()" style="margin-top: 4px;">Piyasaya Varlık Ekle</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- ALT SABİT MENÜ -->
+    <nav class="tab-nav" id="app-bottom-nav" style="display: none;">
+        <button class="tab-btn active-tab" onclick="switchTab('home', this)"><span>🏠</span><span>Ana Menü</span></button>
+        <button class="tab-btn" onclick="switchTab('crypto', this)"><span>📈</span><span>Piyasa</span></button>
+        <button class="tab-btn" onclick="switchTab('assets', this)"><span>💰</span><span>Varlık</span></button>
+        <button class="tab-btn" onclick="switchTab('livechat', this)"><span>💬</span><span>Destek</span></button>
+        <button class="tab-btn" onclick="switchTab('wallet', this)"><span>💳</span><span>Cüzdan</span></button>
+        <button class="tab-btn" onclick="switchTab('adminroom', this)" id="nav-btn-adminroom" style="display:none;"><span>🛡️</span><span>Yönetim</span></button>
+        <button class="tab-btn" onclick="switchTab('events', this)" id="nav-btn-events"><span>🎉</span><span>Etkinlik</span></button>
+        <button class="tab-btn" onclick="switchTab('wheel', this)"><span>🎡</span><span>Çark</span></button>
+        <button class="tab-btn" onclick="switchTab('court', this)" id="nav-btn-court" style="display:none;"><span>⚖️</span><span>Mahkeme</span></button>
+        <button class="tab-btn" onclick="switchTab('settings', this)"><span>💼</span><span>Çalış</span></button>
+    </nav>
+
+    <!-- CEO İSTİHBARAT & KULLANICI DOSYASI MODALI -->
+    <div id="prosecutor-dossier-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <button class="close-modal" onclick="closeProsecutorDossierModal()">✕</button>
+            <div id="prosecutor-dossier-content" class="receipt-box"></div>
+        </div>
+    </div>
+
+    <!-- DEKONT / FATURA GÖRÜNTÜLEME MODALI -->
+    <div id="receipt-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeReceiptModal()">✕</button>
+            <div id="receipt-content-box" class="receipt-box"></div>
+        </div>
+    </div>
+
+    <!-- TAM EKRAN REKLAM / DUYURU MODALI -->
+    <div id="popup-ad-modal" class="fullscreen-modal">
+        <div class="fullscreen-content">
+            <button class="close-fullscreen" onclick="closePopupAd()">✕</button>
+            <h2 style="color: var(--star-color); margin-bottom: 15px;">📢 Önemli Duyuru & Reklam</h2>
+            <p id="popup-ad-text" style="font-size: 1rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 20px;"></p>
+            <button onclick="closePopupAd()" style="background: var(--accent-color); color: #070b14; border: none; padding: 11px 22px; border-radius: 8px; font-weight: 800; cursor: pointer;">Anladım / Kapat</button>
+        </div>
+    </div>
+
+    <!-- TAM EKRAN GEÇMİŞ DUYURULAR -->
+    <div id="fullscreen-announcement-modal" class="fullscreen-modal">
+        <div class="fullscreen-content">
+            <button class="close-fullscreen" onclick="closeFullscreenAnnouncement()">✕</button>
+            <h2 style="color: var(--accent-color); margin-bottom: 15px;">📢 Platform Duyuruları</h2>
+            <div id="fullscreen-announcement-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow-y: auto; text-align: left;"></div>
+        </div>
+    </div>
+
+    <!-- YILDIZ YÜKLEME VE ÇEKME MODALI -->
+    <div id="topup-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeTopUpModal()">✕</button>
+            <h3 style="color: var(--accent-color); margin-bottom: 12px; font-size: 1.1rem;">⭐ Bot ile Yıldız Yükle / Çek</h3>
+            
+            <div style="margin-bottom: 14px; background: rgba(0,0,0,0.25); padding: 12px; border-radius: 10px; border: 1px solid var(--card-border);">
+                <h4 style="font-size: 0.85rem; color: var(--star-color); margin-bottom: 6px;">Manuel Yıldız Yükle (1 - 500 ⭐)</h4>
+                <input type="number" id="manual-deposit-amount" placeholder="Miktar (1 - 500)..." min="1" max="500" style="padding: 10px; width: 100%; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; margin-bottom: 8px; outline: none;">
+                <button onclick="manualDepositStars()" style="background: var(--star-color); color: #070b14; border: none; padding: 10px; width: 100%; border-radius: 8px; font-weight: 900; cursor: pointer;">Yıldız Yükle 🚀</button>
+            </div>
+
+            <div class="package-grid">
+                <button class="pkg-btn" onclick="botDepositStars(5)">5 ⭐</button>
+                <button class="pkg-btn" onclick="botDepositStars(20)">20 ⭐</button>
+                <button class="pkg-btn" onclick="botDepositStars(50)">50 ⭐</button>
+                <button class="pkg-btn" onclick="botDepositStars(100)">100 ⭐</button>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 15px 0;">
+            
+            <h4 style="font-size: 0.9rem; color: var(--star-color); margin-bottom: 6px;">Telegram'a Manuel Çek (Min 20 - Max 200)</h4>
+            <p id="withdraw-rule-desc-modal" style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 8px;">* Çekim yapabilmek için yönetim ayarına göre yatırma zorunluluğu aranabilir.</p>
+            <input type="number" id="withdraw-amount" placeholder="Miktar (20 - 200)..." min="20" max="200" oninput="checkWithdrawLimit()" style="padding: 10px; width: 100%; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; margin-bottom: 6px; outline: none;">
+            <p id="withdraw-warning" style="font-size: 0.75rem; color: var(--danger-color); margin-bottom: 10px; font-weight: 600;"></p>
+            <button onclick="botWithdrawStars()" style="background: var(--success-color); color: #fff; border: none; padding: 12px; width: 100%; border-radius: 10px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);">Telegram'a Çek (Orjinal Hesap)</button>
+        </div>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // ÖZEL TOAST BİLDİRİM FONKSİYONU
+        function showToast(message, icon = "✨") {
+            let toast = document.getElementById('custom-toast');
+            let textEl = document.getElementById('toast-text');
+            let iconEl = document.getElementById('toast-icon');
+            
+            textEl.innerText = message;
+            iconEl.innerText = icon;
+            toast.classList.add('show');
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        let currentWheelRotation = 0;
+        let liveChartTimer = null;
+        let marketTickerInterval = null;
+        let selectedCryptoIndex = null;
+        let bucketPos = 140;
+        let starFallInterval = null;
+        let starTop = 0;
+        let starLeft = 140;
+        let activeGameReward = 2;
+
+        let data = JSON.parse(localStorage.getItem('app_data_v77')) || {
+            userStars: 0,
+            currentUser: "",
+            currentEmail: "",
+            isAdmin: false,
+            withdrawRuleRequired: true,
+            stats: { topupCount: 0, withdrawCount: 0, botVault: 0 },
+            users: [
+                { username: "ruzgar_ay", email: "ruzgar@gmail.com", title: "Kurucu & CEO", bio: "Sistem Kurucusu ve CEO.", salary: 100, totalDeposited: 1500, totalWithdrawn: 100, permissions: ["events", "announcements", "crypto", "salary", "court", "permissions", "hr"], banned: false, walletId: "RA-WLT-999999", externalWallet: 0 }
+            ],
+            cryptos: [
+                { id: 1, name: "Bitcoin (BTC)", price: 98000, change: "+%4.20", desc: "Küresel kripto pazarının lider varlığı." },
+                { id: 2, name: "Apple Inc. (AAPL)", price: 2400, change: "+%5.60", desc: "Teknoloji devi Apple şirketinin borsa tokenı." },
+                { id: 3, name: "Ethereum (ETH)", price: 3500, change: "+%3.15", desc: "Akıllı sözleşmelerin öncüsü ağ." },
+                { id: 4, name: "Samsung Corp (SMSG)", price: 1250, change: "-%1.40", desc: "Küresel teknoloji ve akıllı cihaz devi." },
+                { id: 5, name: "Solana (SOL)", price: 190, change: "+%8.50", desc: "Yüksek hızlı blokzincir ağı." },
+                { id: 6, name: "Poco Phone Token (POCO)", price: 45, change: "+%15.20", desc: "Fiyat performans canavarı telefon markası tokenı." },
+                { id: 7, name: "RA Borsa (RAB)", price: 500, change: "+%12.50", desc: "RA Borsa kurumsal hisse tokenı." },
+                { id: 8, name: "Dogecoin (DOGE)", price: 12, change: "-%2.30", desc: "Halkın popüler ucuz meme kripto parası." },
+                { id: 9, name: "Shiba Inu (SHIB)", price: 3, change: "+%22.40", desc: "Cebinizi yakmayan ucuz altcoin." },
+                { id: 10, name: "Micro Nano Coin (MNC)", price: 1, change: "+%45.00", desc: "Ultra ucuz spekülatif varlık." }
+            ],
+            announcements: [{ id: 1, text: "RA Borsa Mega Volatil Piyasalar aktif! Fiyatlar sert dalgalanıyor.", limit: 5, shownCount: 0 }],
+            events: [
+                { id: 1, title: "⭐ Yıldız Toplama (Kova Oyunu)", desc: "Kovayı hareket ettir, düşen yıldızları yakala, ödülü kap!", img: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=500", type: "game_bucket", reward: 2.0 }
+            ],
+            lawsuits: [],
+            lawsuitRequests: [],
+            jobApplications: [],
+            notifications: {},
+            chatMessages: [{ sender: "Sistem", text: "Canlı sohbet odasına hoş geldiniz! @destek yazarak yardım isteyebilirsiniz." }],
+            adminChatMessages: [{ sender: "Sistem", text: "CEO yönetim odası aktif." }],
+            userAssets: {},
+            userInvoices: [],
+            lastSpinDate: ""
+        };
+
+        window.onload = function() {
+            let rememberedUser = localStorage.getItem('remembered_user');
+            if(rememberedUser) {
+                let found = data.users.find(u => u.username === rememberedUser);
+                if(found && !found.banned) {
+                    data.currentUser = found.username;
+                    data.currentEmail = found.email;
+                    let isSuperAdmin = (found.username === "ruzgar_ay");
+                    data.isAdmin = isSuperAdmin || (found.permissions && found.permissions.length > 0);
+                    if(isSuperAdmin) {
+                        data.userStars = 999999;
+                        found.title = "Kurucu & CEO";
+                        found.walletId = "RA-WLT-999999";
+                    }
+                    if(!found.walletId) {
+                        found.walletId = "RA-WLT-" + Math.floor(100000 + Math.random() * 900000);
+                        saveData();
+                    }
+                    enterMainApp();
+                }
+            }
+        };
+
+        function switchAuthMode(mode) {
+            if(mode === 'register') {
+                document.getElementById('screen-login').classList.remove('active');
+                document.getElementById('screen-register').classList.add('active');
+            } else {
+                document.getElementById('screen-register').classList.remove('active');
+                document.getElementById('screen-login').classList.add('active');
+            }
+        }
+
+        function loginAsCEO() {
+            data.isAdmin = true;
+            data.currentUser = "ruzgar_ay";
+            data.currentEmail = "ruzgar@gmail.com";
+            data.userStars = 999999;
+            let found = data.users.find(u => u.username === "ruzgar_ay");
+            if(found) {
+                found.title = "Kurucu & CEO";
+                found.walletId = "RA-WLT-999999";
+            }
+            localStorage.setItem('remembered_user', "ruzgar_ay");
+            enterMainApp();
+        }
+
+        function handleLogin() {
+            let uInput = document.getElementById('login-user').value.trim();
+            let pInput = document.getElementById('login-pass').value.trim();
+            let rememberMe = document.getElementById('remember-me-chk').checked;
+
+            if(!uInput || !pInput) return showToast("Lütfen tüm alanları doldurun!", "⚠️");
+
+            if((uInput.toLowerCase() === "ruzgar_ay") && pInput === "ruzgar_ay") {
+                loginAsCEO();
+                return;
+            } else {
+                let found = data.users.find(u => u.username === uInput || u.email === uInput);
+                if(!found) return showToast("Kullanıcı bulunamadı! Önce Kayıt Olun.", "❌");
+                if(found.banned) return showToast("Bu hesap yasaklanmıştır!", "🚫");
+                data.currentUser = found.username;
+                data.currentEmail = found.email;
+                data.isAdmin = (found.username === "ruzgar_ay" || (found.permissions && found.permissions.length > 0));
+                data.userStars = found.userStars || 0;
+                if(!found.walletId) {
+                    found.walletId = "RA-WLT-" + Math.floor(100000 + Math.random() * 900000);
+                    saveData();
+                }
+            }
+
+            if(rememberMe) localStorage.setItem('remembered_user', data.currentUser);
+            enterMainApp();
+        }
+
+        function handleRegister() {
+            let email = document.getElementById('reg-email').value.trim();
+            let uName = document.getElementById('reg-username').value.trim();
+            let uPass = document.getElementById('reg-pass').value.trim();
+            let bio = document.getElementById('reg-bio').value.trim() || "Yeni borsa yatırımcısı.";
+            if(!email || !uName || !uPass) return showToast("Lütfen tüm alanları doldurun!", "⚠️");
+
+            let exists = data.users.find(u => u.username === uName || u.email === email);
+            if(exists) return showToast("Bu kullanıcı adı veya Gmail zaten kayıtlı!", "❌");
+
+            let generatedWalletId = "RA-WLT-" + Math.floor(100000 + Math.random() * 900000);
+
+            data.users.push({ username: uName, email: email, title: "Vatandaş / Yatırımcı", bio: bio, salary: 30, totalDeposited: 0, totalWithdrawn: 0, permissions: [], banned: false, userStars: 0, walletId: generatedWalletId, externalWallet: 0 });
+            data.currentUser = uName;
+            data.currentEmail = email;
+            data.isAdmin = false;
+            data.userStars = 0;
+            saveData();
+
+            showToast("Kayıt başarılı! Giriş yapılıyor...", "🚀");
+            enterMainApp();
+        }
+
+        function enterMainApp() {
+            document.getElementById('screen-login').classList.remove('active');
+            document.getElementById('screen-register').classList.remove('active');
+            document.getElementById('app-header').style.display = 'flex';
+            document.getElementById('app-bottom-nav').style.display = 'flex';
+            document.getElementById('screen-main').classList.add('active');
+
+            let currentUserObj = data.users.find(u => u.username === data.currentUser);
+            if(data.currentUser === "ruzgar_ay" && currentUserObj) {
+                currentUserObj.title = "Kurucu & CEO";
+                currentUserObj.walletId = "RA-WLT-999999";
+            }
+            if(currentUserObj) {
+                if(currentUserObj.userStars !== undefined && data.currentUser !== "ruzgar_ay") {
+                    data.userStars = currentUserObj.userStars;
+                }
+                if(!currentUserObj.walletId) {
+                    currentUserObj.walletId = "RA-WLT-" + Math.floor(100000 + Math.random() * 900000);
+                    saveData();
+                }
+                document.getElementById('wallet-api-id-display').innerText = currentUserObj.walletId;
+            }
+
+            let hasAnyAdminAccess = (data.currentUser === "ruzgar_ay" || (currentUserObj && currentUserObj.permissions && currentUserObj.permissions.length > 0));
+
+            document.getElementById('btn-admin-panel').style.display = hasAnyAdminAccess ? 'block' : 'none';
+            document.getElementById('nav-btn-adminroom').style.display = hasAnyAdminAccess ? 'flex' : 'none';
+            document.getElementById('nav-btn-court').style.display = (data.currentUser === "ruzgar_ay" || hasPermission('court')) ? 'flex' : 'none';
+
+            checkAndUpdateExpiredLawsuits();
+            checkUpcomingDeadlinesAndNotify();
+
+            updateBalanceUI();
+            renderHomeDashboard();
+            renderCryptoList();
+            renderAssetsList();
+            renderEventsList();
+            renderLawsuits();
+            renderJobApplications();
+            checkUserNotifications();
+            startGlobalMarketTicker();
+            checkAndShowPopupAd();
+        }
+
+        function hasPermission(permKey) {
+            if(data.currentUser === "ruzgar_ay") return true;
+            let user = data.users.find(u => u.username === data.currentUser);
+            if(!user || !user.permissions) return false;
+            return user.permissions.includes(permKey);
+        }
+
+        function isCEO() {
+            return data.currentUser === "ruzgar_ay";
+        }
+
+        function isHRAuthorized() {
+            if (isCEO()) return true;
+            let user = data.users.find(u => u.username === data.currentUser);
+            if (!user) return false;
+            let title = (user.title || "").toLowerCase();
+            let hasHRPerm = user.permissions && user.permissions.includes('hr');
+            return title.includes("ik") || title.includes("komisyon") || title.includes("insan kaynakları") || hasHRPerm;
+        }
+
+        function getUserTitle(username) {
+            if(username === "ruzgar_ay") return "Kurucu & CEO";
+            let user = data.users.find(u => u.username === username);
+            return (user && user.title) ? user.title : "Vatandaş";
+        }
+
+        function checkUserNotifications() {
+            let banner = document.getElementById('user-notification-box');
+            if(data.notifications && data.notifications[data.currentUser]) {
+                banner.style.display = 'flex';
+                banner.innerHTML = `<span>🔔 ${data.notifications[data.currentUser]}</span> <button onclick="clearNotification()" style="background:var(--accent-color); color:#070b14; border:none; padding:5px 10px; border-radius:6px; font-weight:bold; cursor:pointer;">Kapat</button>`;
+            } else {
+                banner.style.display = 'none';
+            }
+        }
+
+        function clearNotification() {
+            if(data.notifications) {
+                delete data.notifications[data.currentUser];
+                saveData();
+                checkUserNotifications();
+            }
+        }
+
+        function sendNotificationToUser(username, msg) {
+            if(!data.notifications) data.notifications = {};
+            data.notifications[username] = msg;
+            data.chatMessages.push({ sender: "Telegram DM Botu", text: `[DM @${username}]: ${msg}` });
+            saveData();
+        }
+
+        function checkUpcomingDeadlinesAndNotify() {
+            if(!data.lawsuits) return;
+            let now = Date.now();
+            data.lawsuits.forEach(c => {
+                if(c.status === 'active' && c.lawyerDeadline) {
+                    let timeLeft = c.lawyerDeadline - now;
+                    if(timeLeft > 0 && timeLeft < 90000 && !c.deadlineNotified) {
+                        c.deadlineNotified = true;
+                        let alertMsg = `⚠️ DİKKAT! "${c.title}" davası için avukat atama son saatiniz (${c.lawyerDeadlineStr}) yaklaşıyor! Duruşma Saati: ${c.hearingTime}. Lütfen aksiyon alın!`;
+                        if(c.plaintiffLawyer) sendNotificationToUser(c.plaintiffLawyer, alertMsg);
+                        if(c.defendantLawyer && !c.defendantLawyer.includes("Atanmadı")) sendNotificationToUser(c.defendantLawyer, alertMsg);
+                        if(c.defendant) sendNotificationToUser(c.defendant, alertMsg);
+                        sendNotificationToUser("ruzgar_ay", `[CEO Uyarı]: ${alertMsg}`);
+                    }
+                }
+            });
+            saveData();
+        }
+
+        function checkAndShowPopupAd() {
+            if(data.announcements.length > 0) {
+                let latestAnn = data.announcements[data.announcements.length - 1];
+                if(!latestAnn.shownCount) latestAnn.shownCount = 0;
+                if(latestAnn.shownCount < (latestAnn.limit || 5)) {
+                    document.getElementById('popup-ad-text').innerText = latestAnn.text;
+                    document.getElementById('popup-ad-modal').classList.add('show');
+                    latestAnn.shownCount++;
+                    saveData();
+                }
+            }
+        }
+        function closePopupAd() { document.getElementById('popup-ad-modal').classList.remove('show'); }
+
+        function switchTab(tabName, btnEl) {
+            if(liveChartTimer) clearInterval(liveChartTimer);
+            if(starFallInterval) clearInterval(starFallInterval);
+            document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active-tab'));
+            document.getElementById('tab-' + tabName).style.display = 'block';
+            if(btnEl) btnEl.classList.add('active-tab');
+            
+            if(tabName === 'home') renderHomeDashboard();
+            if(tabName === 'crypto') renderCryptoList();
+            if(tabName === 'assets') renderAssetsList();
+            if(tabName === 'livechat') renderChatMessages();
+            if(tabName === 'adminroom') renderAdminChatMessages();
+            if(tabName === 'events') renderEventsList();
+            if(tabName === 'settings') renderJobApplications();
+            if(tabName === 'court') { populatePlaintiffLawyerSelect(); renderLawsuits(); }
+        }
+
+        function renderHomeDashboard() {
+            document.getElementById('stat-total-users').innerText = data.users.length;
+            document.getElementById('stat-active-users').innerText = "1";
+            document.getElementById('stat-topup-count').innerText = data.stats.topupCount;
+            document.getElementById('stat-withdraw-count').innerText = data.stats.withdrawCount;
+            document.getElementById('home-announcement-preview').innerText = data.announcements.length > 0 ? data.announcements[data.announcements.length - 1].text : "Aktif duyuru yok.";
+            checkUserNotifications();
+        }
+
+        function openFullscreenAnnouncement() {
+            let listEl = document.getElementById('fullscreen-announcement-list');
+            listEl.innerHTML = '';
+            if(data.announcements.length === 0) {
+                listEl.innerHTML = `<p style="color:#64748b;">Henüz duyuru yapılmadı.</p>`;
+            } else {
+                let isSuper = isCEO() || hasPermission('announcements');
+                data.announcements.forEach(ann => {
+                    let deleteBtn = isSuper ? `<button onclick="adminDeleteAnnouncement(${ann.id})" style="background:var(--danger-color); color:#fff; border:none; padding:4px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer; margin-left:8px; font-weight:700;">Sil</button>` : '';
+                    listEl.innerHTML += `
+                        <div style="background:rgba(0,0,0,0.35); padding:12px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border: 1px solid var(--card-border);">
+                            <span style="font-size:0.88rem; color:#cbd5e1; flex:1;">📢 ${ann.text}</span>
+                            ${deleteBtn}
+                        </div>`;
+                });
+            }
+            document.getElementById('fullscreen-announcement-modal').classList.add('show');
+        }
+        function closeFullscreenAnnouncement() { document.getElementById('fullscreen-announcement-modal').classList.remove('show'); }
+
+        function startGlobalMarketTicker() {
+            if(marketTickerInterval) clearInterval(marketTickerInterval);
+            marketTickerInterval = setInterval(() => {
+                data.cryptos.forEach(crypto => {
+                    let roll = Math.random();
+                    let changePct = 0;
+                    if(roll < 0.15) {
+                        changePct = -(Math.random() * 0.6 + 0.3);
+                    } else if(roll < 0.30) {
+                        changePct = (Math.random() * 1.5 + 0.5);
+                    } else {
+                        changePct = (Math.random() * 0.1 - 0.05);
+                    }
+
+                    crypto.price = parseFloat((crypto.price * (1 + changePct)).toFixed(2));
+                    if(crypto.price < 0.5) crypto.price = 0.5;
+
+                    let pctVal = (changePct * 100).toFixed(1);
+                    crypto.change = (pctVal >= 0 ? "+%" : "%") + pctVal;
+                });
+
+                let cryptoTab = document.getElementById('tab-crypto');
+                if(cryptoTab && cryptoTab.style.display === 'block') {
+                    renderCryptoList();
+                }
+            }, 2500);
+        }
+
+        function renderCryptoList() {
+            const listEl = document.getElementById('crypto-list');
+            listEl.innerHTML = '';
+            data.cryptos.forEach((crypto, index) => {
+                let isPos = crypto.change ? crypto.change.includes('+') : true;
+                listEl.innerHTML += `
+                    <div class="card" onclick="openCryptoDetail(${index})">
+                        <div class="card-info">
+                            <h3>${crypto.name}</h3>
+                            <p>${crypto.desc}</p>
+                        </div>
+                        <div class="crypto-price">
+                            <div class="price">⭐ ${crypto.price}</div>
+                            <div class="change ${isPos ? 'pos' : 'neg'}">${crypto.change}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function openCryptoDetail(index) {
+            selectedCryptoIndex = index;
+            let crypto = data.cryptos[index];
+            let headerBox = document.getElementById('detail-header-content');
+            
+            headerBox.innerHTML = `
+                <h2 style="color: var(--accent-color); font-size: 1.15rem; margin-bottom: 4px;">${crypto.name} - Canlı İzleme</h2>
+                <p style="font-weight: bold; color: var(--star-color); margin-top: 2px;">Anlık Fiyat: ⭐ <span id="live-price-val">${crypto.price}</span> Yıldız</p>
+                <div class="live-chart-box">
+                    <div class="chart-bar" style="height: 40%;"></div>
+                    <div class="chart-bar" style="height: 60%;"></div>
+                    <div class="chart-bar" style="height: 75%;"></div>
+                    <div class="chart-bar" style="height: 90%;"></div>
+                </div>
+                <div style="margin-top: 10px; background: rgba(0,0,0,0.25); padding: 15px; border-radius: 12px; border: 1px solid var(--card-border); display: flex; flex-direction: column; gap: 10px;">
+                    <input type="number" id="trade-amount" placeholder="Adet..." min="1" value="1" oninput="calculateTotal()" style="padding:11px; width:100%; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2); border-radius:8px; color:#fff; outline:none;">
+                    <p id="total-cost" style="font-size: 0.88rem; color: #cbd5e1; font-weight: 600;">Toplam Tutar: ⭐ ${crypto.price}</p>
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="executeTrade('BUY')" style="flex:1; background:var(--success-color); color:#fff; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);">Satın Al</button>
+                        <button onclick="executeTrade('SELL')" style="flex:1; background:var(--danger-color); color:#fff; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);">Sat</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('screen-main').classList.remove('active');
+            document.getElementById('screen-detail').classList.add('active');
+            startLiveChartSimulation(crypto);
+        }
+
+        function startLiveChartSimulation(crypto) {
+            if(liveChartTimer) clearInterval(liveChartTimer);
+            liveChartTimer = setInterval(() => {
+                let bars = document.querySelectorAll('.chart-bar');
+                bars.forEach(bar => { bar.style.height = (Math.floor(Math.random() * 70) + 25) + '%'; });
+                let priceEl = document.getElementById('live-price-val');
+                if(priceEl) priceEl.innerText = crypto.price;
+            }, 1000);
+        }
+
+        function calculateTotal() {
+            let amount = parseInt(document.getElementById('trade-amount').value) || 0;
+            let total = amount * data.cryptos[selectedCryptoIndex].price;
+            document.getElementById('total-cost').innerText = `Toplam Tutar: ⭐ ${total}`;
+        }
+
+        function executeTrade(type) {
+            let uObj = data.users.find(u => u.username === data.currentUser);
+            if(uObj && uObj.assetsFrozen) {
+                return showToast("⚠️ Mahkeme kararıyla mal varlıklarınıza TEDBİR KONULMUŞTUR!", "🚫");
+            }
+
+            let amount = parseInt(document.getElementById('trade-amount').value) || 0;
+            if(amount <= 0) return showToast("Geçerli miktar girin!", "⚠️");
+            let crypto = data.cryptos[selectedCryptoIndex];
+            let cost = amount * crypto.price;
+
+            if(type === 'BUY') {
+                if(data.userStars < cost) return showToast("Yetersiz Bakiye!", "❌");
+                data.userStars -= cost;
+                if(!uObj.userAssets) uObj.userAssets = {};
+                if(!uObj.userAssets[crypto.id]) uObj.userAssets[crypto.id] = 0;
+                uObj.userAssets[crypto.id] += amount;
+
+                uObj.totalDeposited = (uObj.totalDeposited || 0) + cost;
+
+                if(!data.userInvoices) data.userInvoices = [];
+                let invoiceId = 'INV-' + Math.floor(100000 + Math.random() * 900000);
+
+                data.userInvoices.push({
+                    id: invoiceId,
+                    username: data.currentUser,
+                    email: uObj.email,
+                    cryptoId: crypto.id,
+                    cryptoName: crypto.name,
+                    amount: amount,
+                    buyPrice: crypto.price,
+                    totalCost: cost,
+                    date: new Date().toLocaleDateString()
+                });
+
+                showToast(`${amount} adet ${crypto.name} alındı! Faturanız oluşturuldu.`, "🧾");
+            } else {
+                let owned = (uObj.userAssets && uObj.userAssets[crypto.id]) ? uObj.userAssets[crypto.id] : 0;
+                if(owned < amount) return showToast("Varlığın yok!", "❌");
+                data.userStars += cost;
+                uObj.userAssets[crypto.id] -= amount;
+                showToast(`${amount} adet ${crypto.name} satıldı!`, "💰");
+            }
+            if(uObj) uObj.userStars = data.userStars;
+            updateBalanceUI();
+            renderAssetsList();
+            saveData();
+        }
+
+        function maskString(str) {
+            if(!str) return "***";
+            if(str.includes("@")) {
+                let parts = str.split("@");
+                let name = parts[0];
+                let maskedName = name.length > 2 ? name.substring(0, 2) + "***" : "***";
+                return maskedName + "@" + parts[1];
+            }
+            return str.length > 3 ? str.substring(0, 2) + "***" : "***";
+        }
+
+        function openReceiptModal(invoiceId) {
+            let inv = (data.userInvoices || []).find(i => i.id === invoiceId);
+            if(!inv) return showToast("Fatura bulunamadı!", "❌");
+
+            let maskedUser = maskString(inv.username);
+            let maskedEmail = maskString(inv.email);
+            let invLink = `raborsa://invoice/${inv.id}`;
+
+            let financeMinister = data.users.find(u => u.title && (u.title.toLowerCase().includes("maliye") || u.title.toLowerCase().includes("bakan")));
+            let ministerDisplayName = financeMinister ? `${financeMinister.username} (${financeMinister.title})` : "*(Maliye Bakanı Atanmadı)*";
+
+            let box = document.getElementById('receipt-content-box');
+            box.innerHTML = `
+                <h3>🧾 RA Borsa Resmi İşlem Dekontu</h3>
+                <div class="receipt-row"><span>Belge No:</span> <span>${inv.id}</span></div>
+                <div class="receipt-row"><span>Tarih:</span> <span>${inv.date}</span></div>
+                <div class="receipt-row"><span>İşlem Yapan:</span> <span>@${maskedUser}</span></div>
+                <div class="receipt-row"><span>Gmail Adresi:</span> <span>${maskedEmail}</span></div>
+                <div class="receipt-row"><span>Varlık:</span> <span>${inv.cryptoName}</span></div>
+                <div class="receipt-row"><span>Adet / Miktar:</span> <span>${inv.amount} Adet</span></div>
+                <div class="receipt-row"><span>Birim Alış Fiyatı:</span> <span>⭐ ${inv.buyPrice}</span></div>
+                <div class="receipt-row"><span>Toplam Maliyet:</span> <span style="color:var(--star-color);">⭐ ${inv.totalCost}</span></div>
+                <div style="margin-top:8px; font-size:0.75rem; color:#94a3b8; word-break:break-all; text-align:center;">
+                    <b>Dekont Linki:</b><br>${invLink}
+                </div>
+                
+                <div class="official-stamp-box">
+                    <div class="stamp-badge">RA BORSA<br>✓ ONAYLANDI</div>
+                    <div class="signature-area">
+                        <span>Resmi Mali Mühür & İmza</span><br>
+                        <span class="sign-name">${ministerDisplayName}</span><br>
+                        <span style="font-size:0.65rem; color:#cbd5e1;">T.C. / RA Borsa Maliye Bakanı</span>
+                    </div>
+                </div>
+
+                <button onclick="closeReceiptModal()" style="margin-top:12px; background:var(--accent-color); color:#070b14; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; width:100%;">Kapat</button>
+            `;
+            document.getElementById('receipt-modal').classList.add('show');
+        }
+
+        function closeReceiptModal() {
+            document.getElementById('receipt-modal').classList.remove('show');
+        }
+
+        function renderAssetsList() {
+            const listEl = document.getElementById('assets-list');
+            listEl.innerHTML = '';
+            
+            let uObj = data.users.find(u => u.username === data.currentUser);
+            let assets = (uObj && uObj.userAssets) ? uObj.userAssets : {};
+            let hasAsset = Object.keys(assets).some(id => assets[id] > 0);
+            let userInvoices = (data.userInvoices || []).filter(inv => inv.username === data.currentUser);
+
+            if(uObj && uObj.assetsFrozen) {
+                listEl.innerHTML += `<div style="background:rgba(239,68,68,0.15); border:1px solid var(--danger-color); padding:12px; border-radius:10px; margin-bottom:12px; font-size:0.85rem; color:var(--danger-color); text-align:center; font-weight:700;">⚠️ Mahkeme kararıyla mal varlıklarınıza TEDBİR (KİLİT) konulmuştur!</div>`;
+            }
+
+            if(!hasAsset && userInvoices.length === 0) {
+                listEl.innerHTML += `<p style="text-align: center; color: var(--text-muted); font-size: 0.88rem; margin-top: 25px;">Henüz varlığınız veya faturanız yok.</p>`;
+                return;
+            }
+
+            listEl.innerHTML += `<h4 style="color:var(--accent-color); font-size:0.92rem; margin-bottom:8px; font-weight:700;">📦 Cüzdandaki Varlıklar</h4>`;
+            data.cryptos.forEach(crypto => {
+                let qty = assets[crypto.id] || 0;
+                if(qty > 0) {
+                    listEl.innerHTML += `
+                        <div class="card">
+                            <div><h3>${crypto.name}</h3><p>Adet: <b>${qty}</b></p></div>
+                            <div style="text-align: right; color: var(--star-color); font-weight: bold;">⭐ ${(qty * crypto.price).toFixed(2)}</div>
+                        </div>
+                    `;
+                }
+            });
+
+            listEl.innerHTML += `<h4 style="color:var(--star-color); font-size:0.92rem; margin-top:18px; margin-bottom:8px; font-weight:700;">🧾 İşlem Faturaları & Dekontlar</h4>`;
+            if(userInvoices.length === 0) {
+                listEl.innerHTML += `<p style="font-size:0.82rem; color:var(--text-muted);">Henüz fatura bulunmuyor.</p>`;
+            } else {
+                userInvoices.forEach(inv => {
+                    let cryptoObj = data.cryptos.find(c => c.id === inv.cryptoId);
+                    let currentVal = cryptoObj ? cryptoObj.price : inv.buyPrice;
+                    let currentTotal = inv.amount * currentVal;
+                    let diff = currentTotal - inv.totalCost;
+                    let isLoss = diff < 0;
+
+                    let invLink = `raborsa://invoice/${inv.id}`;
+
+                    listEl.innerHTML += `
+                        <div class="invoice-card">
+                            <div class="invoice-header">
+                                <span>🧾 ${inv.cryptoName} (${inv.amount} Adet)</span>
+                                <span>Alış: ⭐${inv.totalCost}</span>
+                            </div>
+                            <div style="font-size:0.82rem; color:${isLoss ? 'var(--danger-color)' : 'var(--success-color)'}; font-weight:600;">
+                                Güncel Tutar: ⭐${currentTotal.toFixed(2)} | Zarar/Kâr: <b>${diff.toFixed(2)} ⭐</b>
+                            </div>
+                            <div class="invoice-link" onclick="openReceiptModal('${inv.id}')">🔗 ${invLink} (Dekontu Gör)</div>
+                            <button class="add-to-court-btn" onclick="addInvoiceToCourt('${inv.id}', '${inv.cryptoName}', ${Math.abs(diff.toFixed(2))})">⚖️ Bu Zararı Davama Delil Olarak Ekle</button>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        function addInvoiceToCourt(invId, cryptoName, lossAmount) {
+            let descBox = document.getElementById('court-lawsuit-desc');
+            let linkBox = document.getElementById('court-evidence-link');
+            
+            linkBox.value = `raborsa://invoice/${invId} (${cryptoName} - Zarar: ${lossAmount} ⭐)`;
+            descBox.value = `${cryptoName} varlığında faturaya dayalı ${lossAmount} ⭐ net zarar ettim. Mahkeme yoluyla tazminat talep ediyorum.`;
+            
+            switchTab('court', document.querySelectorAll('.tab-btn')[7]);
+            showToast("Fatura delili dava dilekçesine işlendi!", "⚖️");
+        }
+
+        function copyWalletId() {
+            let uObj = data.users.find(u => u.username === data.currentUser);
+            if(!uObj || !uObj.walletId) return showToast("Cüzdan kimlik kodu bulunamadı!", "❌");
+            navigator.clipboard.writeText(uObj.walletId);
+            showToast("Cüzdan Kimlik Kodunuz kopyalandı!", "📋");
+        }
+
+        function calculateWalletWithdraw() {
+            let amt = parseFloat(document.getElementById('wallet-withdraw-amount').value) || 0;
+            let calcEl = document.getElementById('wallet-withdraw-calc');
+            if(amt <= 0) {
+                calcEl.innerText = "";
+                return;
+            }
+            let cut = amt * 0.05;
+            let net = amt - cut;
+            calcEl.innerText = `Kesinti (%5): ${cut.toFixed(2)} ⭐ | Hesabınıza Geçecek: ${net.toFixed(2)} ⭐`;
+        }
+
+        function withdrawFromWallet() {
+            let amt = parseFloat(document.getElementById('wallet-withdraw-amount').value) || 0;
+            if(amt < 10) return showToast("Cüzdandan çekim yapabilmek için en az 10 yıldız olmalıdır!", "⚠️");
+
+            let uObj = data.users.find(u => u.username === data.currentUser);
+            let walletBalance = uObj && uObj.externalWallet ? uObj.externalWallet : 0;
+
+            if(walletBalance < amt) return showToast(`Cüzdan bakiyeniz yetersiz!`, "❌");
+
+            let cut = amt * 0.05;
+            let net = amt - cut;
+
+            uObj.externalWallet -= amt;
+            if(!data.stats.botVault) data.stats.botVault = 0;
+            data.stats.botVault += cut;
+
+            data.stats.withdrawCount++;
+            saveData();
+
+            showToast(`${amt} ⭐ cüzdandan Telegram'a çekildi!`, "🚀");
+            document.getElementById('wallet-withdraw-amount').value = '';
+            document.getElementById('wallet-withdraw-calc').innerText = '';
+        }
+
+        function renderEventsList() {
+            const listEl = document.getElementById('events-list');
+            listEl.innerHTML = '';
+            data.events.forEach(ev => {
+                listEl.innerHTML += `
+                    <div class="window-card" onclick="openEventDetail(${ev.id})">
+                        <h3 style="color:var(--success-color);">${ev.title} <span>➔</span></h3>
+                        <p style="font-size:0.85rem; color:#cbd5e1;">${ev.desc}</p>
+                        <p style="font-size:0.78rem; color:var(--star-color); margin-top:6px; font-weight:700;">🎁 Ödül: ⭐ ${ev.reward || 2}</p>
+                        ${ev.img ? `<img src="${ev.img}" class="event-img">` : ''}
+                    </div>
+                `;
+            });
+        }
+
+        function openEventDetail(id) {
+            let ev = data.events.find(e => e.id === id);
+            if(!ev) return;
+            activeGameReward = ev.reward || 2;
+            let headerBox = document.getElementById('detail-header-content');
+            
+            headerBox.innerHTML = `
+                ${ev.img ? `<img src="${ev.img}" style="width:100%; max-height:200px; object-fit:cover; border-radius:10px; margin-bottom:12px;">` : ''}
+                <h2 style="color: var(--success-color); font-size: 1.15rem; margin-bottom: 4px;">${ev.title}</h2>
+                <p style="font-size: 0.88rem; color: #cbd5e1; margin-top: 4px;">${ev.desc}</p>
+                <div style="margin-top:15px; text-align:center;">
+                    <h4 style="color:var(--star-color); font-size: 0.95rem; margin-bottom: 4px;">⭐ Kova ile Yıldız Toplama Oyunu</h4>
+                    <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:10px;">SOL ve SAĞ tuşlarıyla kovayı hareket ettir!</p>
+                    <div class="game-sky-box" id="sky-box">
+                        <div class="falling-star" id="game-star" style="top:0px; left:140px;">⭐</div>
+                        <div class="game-ground"></div>
+                        <div class="game-bucket" id="game-bucket" style="left:140px;">🧺</div>
+                    </div>
+                    <div class="game-controls">
+                        <button class="game-ctrl-btn" onclick="moveBucket(-30)">◀ SOL</button>
+                        <button class="game-ctrl-btn" onclick="moveBucket(30)">SAĞ ▶</button>
+                    </div>
+                    <p id="game-status-msg" style="margin-top:12px; font-size:0.92rem; color:var(--success-color); font-weight:bold;"></p>
+                </div>
+            `;
+            document.getElementById('screen-main').classList.remove('active');
+            document.getElementById('screen-detail').classList.add('active');
+            startBucketGame();
+        }
+
+        function moveBucket(amount) {
+            bucketPos += amount;
+            if(bucketPos < 10) bucketPos = 10;
+            if(bucketPos > 280) bucketPos = 280;
+            let bucket = document.getElementById('game-bucket');
+            if(bucket) bucket.style.left = bucketPos + 'px';
+        }
+
+        function startBucketGame() {
+            if(starFallInterval) clearInterval(starFallInterval);
+            starTop = 0;
+            starLeft = Math.floor(Math.random() * 260) + 10;
+            let starEl = document.getElementById('game-star');
+            let msgEl = document.getElementById('game-status-msg');
+
+            starFallInterval = setInterval(() => {
+                starTop += 8;
+                if(starEl) starEl.style.top = starTop + 'px';
+                if(starEl) starEl.style.left = starLeft + 'px';
+
+                if(starTop >= 180 && starTop <= 210) {
+                    if(Math.abs(starLeft - bucketPos) < 35) {
+                        data.userStars += parseFloat(activeGameReward);
+                        let uObj = data.users.find(u => u.username === data.currentUser);
+                        if(uObj) uObj.userStars = data.userStars;
+                        updateBalanceUI();
+                        saveData();
+                        if(msgEl) msgEl.innerText = `🎉 Yakaladın! +${activeGameReward} Yıldız kazandın!`;
+                        starTop = 0;
+                        starLeft = Math.floor(Math.random() * 260) + 10;
+                    }
+                }
+                if(starTop > 210) {
+                    starTop = 0;
+                    starLeft = Math.floor(Math.random() * 260) + 10;
+                    if(msgEl) msgEl.innerText = `❌ Kaçırdın! Tekrar dene.`;
+                }
+            }, 50);
+        }
+
+        function renderChatMessages() {
+            let box = document.getElementById('live-chat-messages');
+            box.innerHTML = '';
+            data.chatMessages.forEach(m => {
+                let isSupport = m.text.includes("@destek");
+                let title = getUserTitle(m.sender);
+                box.innerHTML += `
+                    <div class="chat-msg ${isSupport ? 'support-alert' : ''}">
+                        <div class="sender-line">
+                            <span class="sender">${m.sender}</span>
+                            <span class="msg-title-badge">${title}</span>
+                        </div>
+                        <span>${m.text}</span>
+                    </div>`;
+            });
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function sendChatMessage() {
+            let input = document.getElementById('chat-input-text');
+            let text = input.value.trim();
+            if(!text) return;
+            data.chatMessages.push({ sender: data.currentUser, text: text });
+            if(text.includes("@destek")) {
+                data.chatMessages.push({ sender: "Destek Botu", text: `📢 @${data.currentUser} için destek talebi oluşturuldu!` });
+            }
+            input.value = '';
+            saveData();
+            renderChatMessages();
+        }
+
+        function renderAdminChatMessages() {
+            let box = document.getElementById('admin-chat-messages');
+            box.innerHTML = '';
+            data.adminChatMessages.forEach(m => {
+                let title = getUserTitle(m.sender);
+                box.innerHTML += `
+                    <div class="chat-msg" style="border-left:3px solid var(--star-color);">
+                        <div class="sender-line">
+                            <span class="sender" style="color:var(--star-color);">${m.sender}</span>
+                            <span class="msg-title-badge">${title}</span>
+                        </div>
+                        <span>${m.text}</span>
+                    </div>`;
+            });
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function sendAdminRoomMessage() {
+            if(!hasPermission('announcements') && !isCEO()) return showToast("Yetkiniz yok!", "❌");
+            let input = document.getElementById('admin-chat-input');
+            let text = input.value.trim();
+            if(!text) return;
+            data.adminChatMessages.push({ sender: data.currentUser, text: text });
+            input.value = '';
+            saveData();
+            renderAdminChatMessages();
+        }
+
+        function spinWheel() {
+            let today = new Date().toDateString();
+            if(data.lastSpinDate === today) return showToast("Bugünkü çark hakkını kullandın!", "⏳");
+            let wheel = document.getElementById('main-wheel-3d');
+            let reward = Math.floor(Math.random() * 10) + 1;
+            currentWheelRotation += 1800 + (reward * 36);
+            wheel.style.transform = `rotate(${currentWheelRotation}deg)`;
+            setTimeout(() => {
+                data.userStars += reward;
+                let uObj = data.users.find(u => u.username === data.currentUser);
+                if(uObj) uObj.userStars = data.userStars;
+                data.lastSpinDate = today;
+                updateBalanceUI();
+                saveData();
+                document.getElementById('wheel-result-text').innerText = `🎉 +${reward} Yıldız kazandın!`;
+                showToast(`+${reward} Yıldız kazandın!`, "🎡");
+            }, 4000);
+        }
+
+        function openTopUpModal() {
+            let descModal = document.getElementById('withdraw-rule-desc-modal');
+            if(data.withdrawRuleRequired) {
+                descModal.innerText = "* Çekim yapabilmek için en az 20 yıldız yatırmış olmalısınız (Kural Açık).";
+            } else {
+                descModal.innerText = "✨ Çekim kuralı yönetim tarafından KALDIRILMIŞTIR! Yatırım şartı aranmaz.";
+            }
+            document.getElementById('topup-modal').classList.add('show');
+        }
+        function closeTopUpModal() { document.getElementById('topup-modal').classList.remove('show'); }
+        
+        function checkWithdrawLimit() {
+            let amt = parseInt(document.getElementById('withdraw-amount').value) || 0;
+            let uObj = data.users.find(u => u.username === data.currentUser);
+            let totalDeposited = uObj ? (uObj.totalDeposited || 0) : 0;
+
+            if (data.withdrawRuleRequired && totalDeposited < 20) {
+                document.getElementById('withdraw-warning').innerText = "⚠️ Yıldız çekebilmek için en az 20 yıldız yatırmış olmalısınız!";
+            } else if (amt < 20 || amt > 200) {
+                document.getElementById('withdraw-warning').innerText = "⚠️ Tek seferde en az 20, en fazla 200 yıldız çekebilirsiniz!";
+            } else {
+                document.getElementById('withdraw-warning').innerText = "✅ Çekim şartları ve limitleri uygun.";
+            }
+        }
+
+        function manualDepositStars() {
+            let amount = parseInt(document.getElementById('manual-deposit-amount').value);
+            if (isNaN(amount) || amount < 1 || amount > 500) {
+                return showToast("Manuel olarak sadece 1 ile 500 arasında yıldız yükleyebilirsiniz!", "⚠️");
+            }
+            
+            data.userStars += amount;
+            data.stats.topupCount++;
+            let uObj = data.users.find(u => u.username === data.currentUser);
+            if(uObj) {
+                uObj.totalDeposited = (uObj.totalDeposited || 0) + amount;
+                uObj.userStars = data.userStars;
+            }
+            updateBalanceUI();
+            saveData();
+            showToast(`Hesabınıza ${amount} yıldız yüklendi!`, "⭐");
+            document.getElementById('manual-deposit-amount').value = '';
+            closeTopUpModal();
+        }
+
+        function botDepositStars(amount) {
+            data.userStars += amount;
+            data.stats.topupCount++;
+            let uObj = data.users.find(u => u.username === data.currentUser);
+            if(uObj) {
+                uObj.totalDeposited = (uObj.totalDeposited || 0) + amount;
+                uObj.userStars = data.userStars;
+            }
+            updateBalanceUI();
+            saveData();
+            showToast(`${amount} ⭐ bota yatırıldı!`, "🤖");
+            closeTopUpModal();
+        }
+
+        function botWithdrawStars() {
+            let amt = parseInt(document.getElementById('withdraw-amount').value);
+            let uObj = data.users.find(u => u.username === data.currentUser);
+            let totalDeposited = uObj ? (uObj.totalDeposited || 0) : 0;
+
+            if (data.withdrawRuleRequired && totalDeposited < 20) {
+                return showToast("Yıldız çekebilmek için en az 20 yıldız yatırmış olmalısınız!", "⚠️");
+            }
+
+            if(isNaN(amt) || amt < 20 || amt > 200) {
+                return showToast("Tek seferde en az 20, en fazla 200 yıldız çekebilirsiniz!", "⚠️");
+            }
+
+            if(data.userStars < amt) return showToast("Yetersiz Bakiye!", "❌");
+            
+            data.userStars -= amt;
+            data.stats.withdrawCount++;
+            if(uObj) {
+                uObj.totalWithdrawn = (uObj.totalWithdrawn || 0) + amt;
+                uObj.userStars = data.userStars;
+            }
+
+            updateBalanceUI();
+            saveData();
+            showToast(`${amt} yıldız Telegram hesabınıza çekiliyor!`, "🚀");
+            closeTopUpModal();
+        }
+
+        function updateBalanceUI() { document.getElementById('user-stars').innerText = data.userStars.toFixed(1); }
+
+        function adminDistributeCustomStarsToEveryone() {
+            if(!isCEO() && !hasPermission('salary')) return showToast("Yetkiniz yok!", "❌");
+            let amountInput = parseFloat(document.getElementById('admin-global-star-amount').value);
+            if(isNaN(amountInput) || amountInput <= 0) return showToast("Geçerli bir yıldız miktarı girin!", "⚠️");
+
+            if(!confirm(`Bütün kayıtlı kullanıcılara cüzdanlarına ${amountInput} ⭐ dağıtılsın mı?`)) return;
+            
+            let count = 0;
+            data.users.forEach(u => {
+                u.userStars = (u.userStars || 0) + amountInput;
+                if(u.username === data.currentUser) {
+                    data.userStars = u.userStars;
+                }
+                count++;
+            });
+            updateBalanceUI();
+            saveData();
+            showToast(`Toplam ${count} kullanıcının hesabına ${amountInput} ⭐ eklendi!`, "🎁");
+        }
+
+        function adminToggleWithdrawRule() {
+            if(!isCEO() && !hasPermission('permissions')) return showToast("Yetkiniz yok!", "❌");
+            data.withdrawRuleRequired = !data.withdrawRuleRequired;
+            saveData();
+            updateWithdrawRuleUI();
+            showToast(`Çekim kuralı: ${data.withdrawRuleRequired ? 'Açık' : 'Kaldırıldı'}`, "ℹ️");
+        }
+
+        function updateWithdrawRuleUI() {
+            let btn = document.getElementById('btn-toggle-withdraw-rule');
+            if(!btn) return;
+            if(data.withdrawRuleRequired) {
+                btn.innerText = "🔓 Çekim Kuralını Esnet (Açık)";
+                btn.style.background = "var(--accent-color)";
+            } else {
+                btn.innerText = "🔒 Çekim Kuralını Geri Getir (Kapalı)";
+                btn.style.background = "var(--success-color)";
+            }
+        }
+
+        function submitJobApplication() {
+            let position = document.getElementById('job-apply-position').value;
+            let tgContact = document.getElementById('job-contact-tg').value.trim();
+            let igContact = document.getElementById('job-contact-ig').value.trim();
+            let wpContact = document.getElementById('job-contact-wp').value.trim();
+
+            if (!tgContact && !igContact && !wpContact) {
+                return showToast("Lütfen en az bir iletişim kanalı girin!", "⚠️");
+            }
+
+            let branchCheckboxes = document.querySelectorAll('.job-branch-chk:checked');
+            if (branchCheckboxes.length === 0) return showToast("Lütfen en az 1 branş seçin!", "⚠️");
+            if (branchCheckboxes.length > 2) return showToast("En fazla 2 branş seçebilirsin!", "⚠️");
+
+            let selectedBranches = [];
+            branchCheckboxes.forEach(cb => selectedBranches.push(cb.value));
+
+            if(!data.jobApplications) data.jobApplications = [];
+            let existing = data.jobApplications.find(a => a.username === data.currentUser && a.status === 'pending');
+            if(existing) return showToast("Zaten beklemede olan aktif bir başvurunuz var!", "⏳");
+
+            let newApp = {
+                id: Date.now(),
+                username: data.currentUser,
+                position,
+                branches: selectedBranches,
+                contact: tgContact || igContact || wpContact,
+                status: 'pending',
+                date: new Date().toLocaleDateString()
+            };
+
+            data.jobApplications.push(newApp);
+            saveData();
+
+            showToast("İş başvurunuz İK kuruluna gönderildi!", "🚀");
+            document.getElementById('job-contact-tg').value = '';
+            document.getElementById('job-contact-ig').value = '';
+            document.getElementById('job-contact-wp').value = '';
+            branchCheckboxes.forEach(cb => cb.checked = false);
+            renderJobApplications();
+        }
+
+        function renderJobApplications() {
+            let section = document.getElementById('hr-applications-management-section');
+            let list = document.getElementById('hr-pending-applications-list');
+            if(!section || !list) return;
+
+            if (isHRAuthorized()) {
+                section.style.display = 'block';
+                list.innerHTML = '';
+                let pending = (data.jobApplications || []).filter(a => a.status === 'pending');
+                if(pending.length === 0) {
+                    list.innerHTML = `<p style="font-size:0.8rem; color:#64748b;">Onay bekleyen başvuru yok.</p>`;
+                } else {
+                    pending.forEach(app => {
+                        list.innerHTML += `
+                            <div class="window-card" style="border: 1px solid var(--star-color); margin-bottom:8px;">
+                                <h3 style="color:var(--star-color);">@${app.username} <span style="font-size:0.75rem; color:var(--accent-color);">[Pozisyon: ${app.position}]</span></h3>
+                                <p style="font-size:0.8rem; color:#f8fafc; margin-top:4px;"><b>Branşlar:</b> ${app.branches.join(', ')}</p>
+                                <p style="font-size:0.78rem; color:#38bdf8; margin-top:4px;"><b>İletişim:</b> ${app.contact} | <b>Tarih:</b> ${app.date}</p>
+                                <div style="display:flex; gap:6px; margin-top:10px;">
+                                    <button onclick="hrApproveApplication(${app.id})" style="flex:1; background:var(--success-color); color:#fff; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;">Onayla & Kadroya Al ⚡</button>
+                                    <button onclick="hrRejectApplication(${app.id})" style="flex:1; background:var(--danger-color); color:#fff; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;">Reddet ❌</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        function hrApproveApplication(appId) {
+            let app = (data.jobApplications || []).find(a => a.id === appId);
+            if(!app) return showToast("Başvuru bulunamadı!", "❌");
+
+            app.status = 'approved';
+            saveData();
+
+            sendNotificationToUser(app.username, `🎉 Tebrikler! "${app.position}" pozisyonu için İK iş başvurunuz onaylandı!`);
+            showToast(`@${app.username} başvurusu onaylandı!`, "✅");
+
+            openAdminPanel();
+            document.getElementById('adm-target-user').value = app.username;
+            document.getElementById('adm-target-title').value = app.position;
+            
+            let checkboxes = document.querySelectorAll('#perm-checkboxes-box input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                if(app.position.toLowerCase().includes('avukat') && cb.value === 'court') cb.checked = true;
+                if(app.position.toLowerCase().includes('ik') && cb.value === 'permissions') cb.checked = true;
+                if(app.position.toLowerCase().includes('operatör') && cb.value === 'announcements') cb.checked = true;
+            });
+
+            renderJobApplications();
+        }
+
+        function hrRejectApplication(appId) {
+            let app = (data.jobApplications || []).find(a => a.id === appId);
+            if(!app) return;
+            app.status = 'rejected';
+            saveData();
+            sendNotificationToUser(app.username, `❌ Üzgünüz, başvirunuz reddedildi.`);
+            showToast("Başvuru reddedildi.", "❌");
+            renderJobApplications();
+        }
+
+        function populatePlaintiffLawyerSelect() {
+            let selectEl = document.getElementById('court-plaintiff-lawyer-select');
+            if(!selectEl) return;
+            selectEl.innerHTML = `<option value="">-- Serbest Avukat Seçin --</option>`;
+
+            let normalLawyers = data.users.filter(u => u.title && u.title.trim().toLowerCase() === "avukat");
+            if(normalLawyers.length === 0) {
+                selectEl.innerHTML += `<option value="" disabled>Kayıtlı serbest avukat yok</option>`;
+            } else {
+                normalLawyers.forEach(l => {
+                    selectEl.innerHTML += `<option value="${l.username}">@${l.username} (Serbest Avukat)</option>`;
+                });
+            }
+        }
+
+        function submitCitizenLawsuitRequest() {
+            let title = document.getElementById('court-lawsuit-title').value.trim();
+            let desc = document.getElementById('court-lawsuit-desc').value.trim();
+            let evidence = document.getElementById('court-evidence-link').value.trim();
+            let plaintiffLawyer = document.getElementById('court-plaintiff-lawyer-select').value;
+            let defendantUser = document.getElementById('court-defendant-user').value.trim();
+
+            if(!title || !desc || !defendantUser) return showToast("Lütfen tüm alanları doldurun!", "⚠️");
+            if(!plaintiffLawyer) return showToast("Lütfen bir serbest avukat seçin!", "⚠️");
+
+            let defendantObj = data.users.find(u => u.username === defendantUser);
+            if(!defendantObj) return showToast("Dava edilen kullanıcı bulunamadı!", "❌");
+
+            let currentUserObj = data.users.find(u => u.username === data.currentUser);
+            let maskedEmail = maskString(currentUserObj ? currentUserObj.email : data.currentEmail);
+
+            let newRequest = {
+                id: Date.now(),
+                plaintiff: data.currentUser,
+                plaintiffEmail: maskedEmail,
+                defendant: defendantUser,
+                title,
+                desc,
+                evidence: evidence || "Delil Fatura Yok",
+                plaintiffLawyer
+            };
+
+            if(!data.lawsuitRequests) data.lawsuitRequests = [];
+            data.lawsuitRequests.push(newRequest);
+            saveData();
+
+            showToast("Dava dilekçeniz Başsavcılık onayına gönderildi!", "⚖️");
+            document.getElementById('court-lawsuit-title').value = '';
+            document.getElementById('court-lawsuit-desc').value = '';
+            document.getElementById('court-evidence-link').value = '';
+            document.getElementById('court-plaintiff-lawyer-select').value = '';
+            document.getElementById('court-defendant-user').value = '';
+            renderLawsuits();
+        }
+
+        function ceoApproveRequest(reqId) {
+            if(!isCEO() && !hasPermission('court')) return showToast("Yetkiniz yok!", "❌");
+            let req = (data.lawsuitRequests || []).find(r => r.id === reqId);
+            if(!req) return showToast("İstek bulunamadı!", "❌");
+
+            let defendantLawyer = prompt("Karşı Taraf / Şirket Avukatı Kullanıcı Adını Girin:", "ruzgar_ay");
+            if(!defendantLawyer) return;
+
+            let hearingTime = prompt("Duruşma Saatini Girin (örn: 17:00):", "17:00");
+            if(!hearingTime) return;
+            let lawyerDeadlineStr = prompt("Avukat Atama Son Saatini Girin (örn: 13:00):", "13:00");
+            if(!lawyerDeadlineStr) return;
+
+            let lawsuitId = Date.now();
+            let fileCode = 'MAH-FILE-' + Math.floor(100000 + Math.random() * 900000);
+            let lawyerDeadline = Date.now() + (2 * 60 * 1000);
+
+            let newCase = {
+                id: lawsuitId,
+                fileCode: fileCode,
+                plaintiff: req.plaintiff,
+                plaintiffEmail: req.plaintiffEmail,
+                defendant: req.defendant,
+                title: req.title,
+                desc: req.desc,
+                evidence: req.evidence,
+                plaintiffLawyer: req.plaintiffLawyer,
+                defendantLawyer: defendantLawyer,
+                lawyerDeadline: lawyerDeadline,
+                hearingTime: hearingTime,
+                lawyerDeadlineStr: lawyerDeadlineStr,
+                prosecutorNote: `⚖️ [Başsavcılık]: Dava onaylandı. Karşı Avukat: @${defendantLawyer}`,
+                lawyerDefense: "",
+                verdict: `Aktif Duruşma (Avukat Son Saat: ${lawyerDeadlineStr} | Duruşma: ${hearingTime})`,
+                status: "active"
+            };
+
+            if(!data.lawsuits) data.lawsuits = [];
+            data.lawsuits.push(newCase);
+
+            data.lawsuitRequests = data.lawsuitRequests.filter(r => r.id !== reqId);
+            saveData();
+
+            let notificationText = `✅ Dava dilekçeniz Başsavcılık tarafından onaylandı!\n\n📋 Dosya Kodunuz: ${fileCode}\n⏰ Duruşma Saati: ${hearingTime}`;
+            sendNotificationToUser(req.plaintiff, notificationText);
+            sendNotificationToUser(req.defendant, `⚖️ Hakkınızda dava açıldı. Dosya Kodu: ${fileCode}`);
+            sendNotificationToUser(defendantLawyer, `🏛️ Size yeni davada avukatlık atandı. Dosya Kodu: ${fileCode}`);
+
+            showToast(`Dava onaylandı! Dosya Kodu: ${fileCode}`, "⚖️");
+            renderLawsuits();
+        }
+
+        function ceoRejectRequest(reqId) {
+            if(!isCEO() && !hasPermission('court')) return showToast("Yetkiniz yok!", "❌");
+            let req = (data.lawsuitRequests || []).find(r => r.id === reqId);
+            if(req) {
+                sendNotificationToUser(req.plaintiff, `❌ Dava dilekçeniz reddedildi.`);
+                data.lawsuitRequests = data.lawsuitRequests.filter(r => r.id !== reqId);
+                saveData();
+                showToast("İstek reddedildi.", "❌");
+                renderLawsuits();
+            }
+        }
+
+        function searchCourtFile() {
+            let code = document.getElementById('court-search-file-code').value.trim().toUpperCase();
+            let resBox = document.getElementById('court-search-result-box');
+            if(!code) return showToast("Lütfen bir dosya kodu girin!", "⚠️");
+
+            let found = (data.lawsuits || []).find(c => c.fileCode === code);
+            if(!found) {
+                resBox.innerHTML = `<p style="color:var(--danger-color); font-weight:bold;">❌ "${code}" kodlu dava bulunamadı!</p>`;
+                return;
+            }
+
+            let statusColor = found.status === 'resolved' ? 'var(--success-color)' : (found.status === 'postponed' ? 'var(--star-color)' : 'var(--accent-color)');
+
+            resBox.innerHTML = `
+                <div style="background:rgba(0,0,0,0.4); border:1px solid var(--star-color); padding:12px; border-radius:10px; margin-top:6px;">
+                    <h4 style="color:var(--star-color); font-size:0.9rem; margin-bottom:4px;">📋 Dosya No: ${found.fileCode}</h4>
+                    <p style="color:#f8fafc; font-size:0.82rem;"><b>Konu:</b> ${found.title}</p>
+                    <p style="color:#cbd5e1; font-size:0.78rem;"><b>Taraflar:</b> @${found.plaintiff} vs @${found.defendant}</p>
+                    <p style="color:#38bdf8; font-size:0.78rem;"><b>Duruşma Saati:</b> ${found.hearingTime || '17:00'}</p>
+                    <p style="color:${statusColor}; font-size:0.85rem; margin-top:6px; font-weight:bold;"><b>Sonuç:</b> ${found.verdict}</p>
+                </div>
+            `;
+        }
+
+        function openProsecutorDossier(targetUsername) {
+            let uObj = data.users.find(u => u.username === targetUsername);
+            if(!uObj) return showToast("Kullanıcı bulunamadı!", "❌");
+
+            sendNotificationToUser(targetUsername, `🔍 Şirket yönetimi / CEO tarafından profiliniz incelemeye alındı.`);
+
+            let maskedEmail = maskString(uObj.email);
+            let assets = uObj.userAssets || {};
+            let assetDetails = "";
+            let hasAssets = false;
+
+            data.cryptos.forEach(c => {
+                let qty = assets[c.id] || 0;
+                if(qty > 0) {
+                    hasAssets = true;
+                    assetDetails += `<div class="receipt-row"><span>${c.name}:</span> <span>${qty} Adet (⭐ ${(qty * c.price).toFixed(2)})</span></div>`;
+                }
+            });
+
+            if(!hasAssets) assetDetails = `<div class="receipt-row"><span>Cüzdan Varlığı:</span> <span>Hiç kripto varlığı yok</span></div>`;
+
+            let box = document.getElementById('prosecutor-dossier-content');
+            box.innerHTML = `
+                <h3>📁 CEO İstihbarat & Şüpheli İnceleme Dosyası</h3>
+                <div class="receipt-row"><span>Kullanıcı Adı:</span> <span>@${uObj.username}</span></div>
+                <div class="receipt-row"><span>Unvan:</span> <span>${uObj.title || "Vatandaş"}</span></div>
+                <div class="receipt-row"><span>Gmail:</span> <span>${maskedEmail}</span></div>
+                <div class="receipt-row"><span>Biyografi:</span> <span>${uObj.bio || "Yok"}</span></div>
+                <div class="receipt-row"><span>Yıldız:</span> <span style="color:var(--star-color);">⭐ ${uObj.userStars || 0}</span></div>
+                <div class="receipt-row"><span>Tedbir:</span> <span style="color:${uObj.assetsFrozen ? 'var(--danger-color)' : 'var(--success-color)'};">${uObj.assetsFrozen ? 'KİLİTLİ' : 'Serbest'}</span></div>
+                <h4 style="color:var(--accent-color); font-size:0.9rem; margin-top:8px;">🪙 Varlıklar:</h4>
+                ${assetDetails}
+                <div style="display:flex; gap:8px; margin-top:12px;">
+                    <button onclick="ceoOpenCasePrompt('${uObj.username}', true)" style="flex:1; background:var(--danger-color); color:#fff; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">Resen Dava + Tedbir 🔒</button>
+                    <button onclick="ceoOpenCasePrompt('${uObj.username}', false)" style="flex:1; background:var(--accent-color); color:#070b14; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">Resen Dava (Tedbirsiz) ⚖️</button>
+                </div>
+                <button onclick="closeProsecutorDossierModal()" style="margin-top:8px; background:rgba(255,255,255,0.1); color:#fff; border:none; padding:10px; border-radius:8px; cursor:pointer; width:100%;">Kapat</button>
+            `;
+            document.getElementById('prosecutor-dossier-modal').classList.add('show');
+        }
+
+        function closeProsecutorDossierModal() {
+            document.getElementById('prosecutor-dossier-modal').classList.remove('show');
+        }
+
+        function ceoOpenCasePrompt(targetUsername, freezeAssets) {
+            if(!isCEO()) return showToast("Yetkiniz yok!", "❌");
+            let title = prompt("Dava Konusu / Suçlama:", "Şüpheli İşlem ve Piyasa Manipülasyonu");
+            if(!title) return;
+            let defenseLawyer = prompt("Karşı Avukat:", "ruzgar_ay");
+            if(!defenseLawyer) return;
+            let hearingTime = prompt("Duruşma Saati:", "17:00");
+            if(!hearingTime) return;
+            let lawyerDeadlineStr = prompt("Avukat Atama Son Saati:", "13:00");
+            if(!lawyerDeadlineStr) return;
+
+            let targetUser = data.users.find(u => u.username === targetUsername);
+            if(!targetUser) return showToast("Kullanıcı bulunamadı!", "❌");
+
+            if(freezeAssets) targetUser.assetsFrozen = true;
+
+            let lawsuitId = Date.now();
+            let fileCode = 'MAH-FILE-' + Math.floor(100000 + Math.random() * 900000);
+            let lawyerDeadline = Date.now() + (2 * 60 * 1000);
+
+            let newCase = {
+                id: lawsuitId,
+                fileCode: fileCode,
+                plaintiff: "Şirket Yönetimi (CEO)",
+                plaintiffEmail: "ceo@raborsa.gov",
+                defendant: targetUsername,
+                title: title,
+                desc: `CEO tarafından @${targetUsername} hakkında resen soruşturma açıldı.`,
+                evidence: "CEO İstihbarat Raporu",
+                plaintiffLawyer: "Şirket Başsavcısı",
+                defendantLawyer: defenseLawyer,
+                lawyerDeadline: lawyerDeadline,
+                hearingTime: hearingTime,
+                lawyerDeadlineStr: lawyerDeadlineStr,
+                prosecutorNote: `⚖️ [Başsavcılık]: Resen soruşturma başlatıldı.`,
+                lawyerDefense: "",
+                verdict: `Aktif Duruşma (Duruşma: ${hearingTime})`,
+                status: "active"
+            };
+
+            if(!data.lawsuits) data.lawsuits = [];
+            data.lawsuits.push(newCase);
+
+            sendNotificationToUser(targetUsername, `🚨 Hakkınızda resen dava açıldı. Dosya Kodu: ${fileCode}`);
+            saveData();
+            showToast(`Resen dava açıldı! Dosya Kodu: ${fileCode}`, "⚖️");
+            closeProsecutorDossierModal();
+            renderProsecutorAIPanel();
+            renderLawsuits();
+        }
+
+        function checkAndUpdateExpiredLawsuits() {
+            if(!data.lawsuits) return;
+            let now = Date.now();
+            data.lawsuits.forEach(c => {
+                if(c.status === 'active' && c.lawyerDeadline && now > c.lawyerDeadline && (!c.defendantLawyer || c.defendantLawyer.includes("Atanmadı"))) {
+                    c.defendantLawyer = "ruzgar_ay (Zorunlu Başsavcı)";
+                    c.verdict = `⏳ Süre aşımı nedeniyle otomatik avukat atandı. Duruşma: ${c.hearingTime || '17:00'}.`;
+                }
+            });
+            saveData();
+        }
+
+        function prosecutorAddIndictment(id) {
+            let note = prompt("Başsavcılık Mütalaa Metni:");
+            if(!note) return;
+            let c = data.lawsuits.find(l => l.id === id);
+            if(c) {
+                c.prosecutorNote = `⚖️ [Başsavcılık]: ${note}`;
+                c.verdict = "İddianame Hazırlandı";
+                saveData();
+                renderLawsuits();
+            }
+        }
+
+        function lawyerAddDefense(id) {
+            let defense = prompt("Avukat Savunma Metniniz:");
+            if(!defense) return;
+            let c = data.lawsuits.find(l => l.id === id);
+            if(c) {
+                c.lawyerDefense = `🏛️ [Avukat @${data.currentUser}]: ${defense}`;
+                c.verdict = "Hakim Kararı Bekleniyor";
+                saveData();
+                renderLawsuits();
+            }
+        }
+
+        function judgeVerdict(id) {
+            let choice = prompt("Hakim Karar Türü:\n1 - Davayı Kabul Et\n2 - Davayı Reddet / Beraat\n3 - Ertele");
+            let c = data.lawsuits.find(l => l.id === id);
+            if(!c) return;
+
+            let judgeObj = data.users.find(u => u.username === data.currentUser);
+            let jTitle = judgeObj ? judgeObj.title : "Hakim";
+            let defendantUser = data.users.find(u => u.username === c.defendant);
+
+            if(choice === '3') {
+                let postponeDate = prompt("Erteleme Saati/Tarihi:");
+                if(!postponeDate) return;
+                c.verdict = `⏳ Dava Ertelendi: ${postponeDate}`;
+                c.status = "postponed";
+                showToast("Dava ertelendi!", "⏳");
+            } else if(choice === '2') {
+                if(defendantUser) defendantUser.assetsFrozen = false;
+                c.verdict = `👨‍⚖️ Dava REDDEDİLDİ ❌ Tedbir kaldırıldı.`;
+                c.status = "resolved";
+                showToast("Dava reddedildi, tedbir kaldırıldı.", "✅");
+            } else {
+                let rewardAmt = parseInt(prompt("Davacıya Tazminat:")) || 0;
+                let confiscateAmt = parseInt(prompt("Sanıktan El Konulacak Yıldız:")) || 0;
+                let lawyerReward = parseInt(prompt("Avukat Primi:")) || 0;
+
+                let plaintiffUser = data.users.find(u => u.username === c.plaintiff);
+                if(plaintiffUser) plaintiffUser.userStars = (plaintiffUser.userStars || 0) + rewardAmt;
+                if(data.currentUser === c.plaintiff) data.userStars += rewardAmt;
+
+                if(defendantUser) {
+                    defendantUser.assetsFrozen = false;
+                    defendantUser.userStars = Math.max(0, (defendantUser.userStars || 0) - confiscateAmt);
+                }
+
+                let lawyerObj = data.users.find(u => u.username === c.plaintiffLawyer);
+                if(lawyerObj) lawyerObj.userStars = (lawyerObj.userStars || 0) + lawyerReward;
+
+                c.verdict = `👨‍⚖️ Dava KABUL EDİLDİ ✅ Davacıya ${rewardAmt} ⭐, Avukata ${lawyerReward} ⭐ ödendi.`;
+                c.status = "resolved";
+
+                updateBalanceUI();
+                showToast("Dava sonuçlandı!", "⚖️");
+            }
+
+            saveData();
+            renderLawsuits();
+        }
+
+        function renderLawsuits() {
+            let activeList = document.getElementById('court-active-cases-list');
+            let pastList = document.getElementById('court-past-cases-list');
+            let requestsSection = document.getElementById('ceo-lawsuit-requests-section');
+            let requestsList = document.getElementById('court-pending-requests-list');
+
+            activeList.innerHTML = '';
+            pastList.innerHTML = '';
+            requestsList.innerHTML = '';
+
+            let isSuper = isCEO() || hasPermission('court');
+
+            if(isSuper) {
+                requestsSection.style.display = 'block';
+                let reqs = data.lawsuitRequests || [];
+                if(reqs.length === 0) {
+                    requestsList.innerHTML = `<p style="font-size:0.8rem; color:#64748b;">Onay bekleyen dava isteği yok.</p>`;
+                } else {
+                    reqs.forEach(req => {
+                        requestsList.innerHTML += `
+                            <div class="window-card" style="border: 1px solid var(--star-color); margin-bottom:8px;">
+                                <h3 style="color:var(--star-color);">${req.title} <span style="font-size:0.7rem; color:#cbd5e1;">(@${req.plaintiff} vs @${req.defendant})</span></h3>
+                                <p style="font-size:0.8rem; color:#f8fafc; margin-top:4px;"><b>Detay:</b> ${req.desc}</p>
+                                <p style="font-size:0.75rem; color:var(--accent-color); margin-top:4px;"><b>Avukat:</b> @${req.plaintiffLawyer}</p>
+                                <div style="display:flex; gap:6px; margin-top:8px;">
+                                    <button onclick="ceoApproveRequest(${req.id})" style="flex:1; background:var(--success-color); color:#fff; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;">Onayla & Dosya No Üret ⚖️</button>
+                                    <button onclick="ceoRejectRequest(${req.id})" style="flex:1; background:var(--danger-color); color:#fff; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;">Reddet ❌</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            } else {
+                requestsSection.style.display = 'none';
+            }
+
+            if(!data.lawsuits || data.lawsuits.length === 0) {
+                activeList.innerHTML = `<p style="text-align:center; color:#64748b; font-size:0.85rem;">Aktif dava bulunmuyor.</p>`;
+                pastList.innerHTML = `<p style="text-align:center; color:#64748b; font-size:0.85rem;">Geçmiş dava arşivi boş.</p>`;
+                return;
+            }
+            
+            let currentUserObj = data.users.find(u => u.username === data.currentUser);
+            let currentTitle = currentUserObj && currentUserObj.title ? currentUserObj.title.trim().toLowerCase() : "";
+            let isAnyLawyer = (currentTitle === "avukat" || currentTitle === "ra borsa & yatırım a.ş. avukatı");
+            let hasActive = false;
+            let hasPast = false;
+
+            data.lawsuits.forEach(c => {
+                let status = c.status || "active";
+                let prosecutorBtn = isSuper ? `<button onclick="prosecutorAddIndictment(${c.id})" style="background:var(--accent-color); color:#070b14; border:none; padding:5px 10px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer; margin-top:6px;">⚖️ Yönetim Notu</button>` : '';
+                let lawyerBtn = (isSuper || isAnyLawyer) ? `<button onclick="lawyerAddDefense(${c.id})" style="background:var(--star-color); color:#070b14; border:none; padding:5px 10px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer; margin-top:6px; margin-left:4px;">🏛️ Savunma</button>` : '';
+                let judgeBtn = isSuper && status === 'active' ? `<button onclick="judgeVerdict(${c.id})" style="background:var(--success-color); color:#fff; border:none; padding:5px 10px; border-radius:6px; font-size:0.75rem; font-weight:bold; cursor:pointer; margin-top:6px; margin-left:4px;">👨‍⚖️ Hakim Kararı</button>` : '';
+
+                let cardHtml = `
+                    <div class="window-card" style="border: 1px solid var(--court-color);">
+                        <h3 style="color:var(--court-color);">${c.title} <span style="font-size:0.7rem; color:var(--star-color);">[Dosya: ${c.fileCode}]</span></h3>
+                        <p style="font-size:0.75rem; color:#cbd5e1; margin-bottom:4px;"><b>Taraflar:</b> @${c.plaintiff} vs @${c.defendant}</p>
+                        <p style="font-size:0.75rem; color:#38bdf8; margin-bottom:4px;">🏛️ <b>Vekil:</b> @${c.plaintiffLawyer || "Atanmadı"} | 🏛️ <b>Karşı:</b> @${c.defendantLawyer || "Atanmadı"}</p>
+                        <p style="font-size:0.75rem; color:var(--star-color); margin-bottom:4px;">⏰ <b>Duruşma:</b> ${c.hearingTime || '17:00'}</p>
+                        <p style="font-size:0.85rem; color:#f8fafc; margin-top:4px;"><b>Detay:</b> ${c.desc}</p>
+                        ${c.prosecutorNote ? `<p style="font-size:0.8rem; color:var(--accent-color); margin-top:6px;">${c.prosecutorNote}</p>` : ''}
+                        ${c.lawyerDefense ? `<p style="font-size:0.8rem; color:var(--star-color); margin-top:6px;">${c.lawyerDefense}</p>` : ''}
+                        <p style="font-size:0.8rem; color:var(--success-color); margin-top:6px;"><b>Durum:</b> ${c.verdict}</p>
+                        <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;">
+                            ${prosecutorBtn}
+                            ${lawyerBtn}
+                            ${judgeBtn}
+                        </div>
+                    </div>
+                `;
+
+                if(status === 'active') {
+                    activeList.innerHTML += cardHtml;
+                    hasActive = true;
+                } else {
+                    pastList.innerHTML += cardHtml;
+                    hasPast = true;
+                }
+            });
+
+            if(!hasActive) activeList.innerHTML = `<p style="text-align:center; color:#64748b; font-size:0.85rem;">Aktif duruşma bulunmuyor.</p>`;
+            if(!hasPast) pastList.innerHTML = `<p style="text-align:center; color:#64748b; font-size:0.85rem;">Geçmiş dava arşivi boş.</p>`;
+        }
+
+        function openAdminPanel() {
+            let isSuper = isCEO();
+            let hasAnyAccess = isSuper || (data.users.find(u => u.username === data.currentUser)?.permissions?.length > 0);
+            if(!hasAnyAccess) return showToast("Yetkiniz yok!", "❌");
+
+            if(liveChartTimer) clearInterval(liveChartTimer);
+            if(starFallInterval) clearInterval(starFallInterval);
+            document.getElementById('screen-main').classList.remove('active');
+            document.getElementById('screen-detail').classList.remove('active');
+            document.getElementById('screen-admin').classList.add('active');
+
+            let prosecutorCheck = isCEO();
+            document.getElementById('sec-prosecutor-ai-panel').style.display = prosecutorCheck ? 'flex' : 'none';
+            if(prosecutorCheck) renderProsecutorAIPanel();
+
+            updateWithdrawRuleUI();
+
+            document.getElementById('sec-salary').style.display = (isSuper || hasPermission('salary')) ? 'flex' : 'none';
+            document.getElementById('sec-events').style.display = (isSuper || hasPermission('events')) ? 'flex' : 'none';
+            document.getElementById('sec-permissions').style.display = (isSuper || hasPermission('permissions')) ? 'flex' : 'none';
+            document.getElementById('sec-bonus').style.display = (isSuper || hasPermission('salary')) ? 'flex' : 'none';
+            document.getElementById('sec-announcements').style.display = (isSuper || hasPermission('announcements')) ? 'flex' : 'none';
+            document.getElementById('sec-crypto').style.display = (isSuper || hasPermission('crypto')) ? 'flex' : 'none';
+
+            renderAdminEventsManagement();
+            renderAdminUsersManagement();
+            renderAdminSalaryManagement();
+            renderAdminAnnouncementsManagement();
+        }
+
+        function renderProsecutorAIPanel() {
+            let box = document.getElementById('prosecutor-ai-report-list');
+            box.innerHTML = '';
+
+            let sortedUsers = [...data.users].sort((a, b) => {
+                let riskA = (a.totalDeposited || 0) + (a.banned ? 10000 : 0);
+                let riskB = (b.totalDeposited || 0) + (b.banned ? 10000 : 0);
+                return riskB - riskA;
+            });
+
+            sortedUsers.forEach(u => {
+                let maskedEmail = maskString(u.email);
+                let isSuspicious = (u.totalDeposited || 0) > 5000;
+                box.innerHTML += `
+                    <div style="background:rgba(0,0,0,0.4); padding:10px; border-radius:8px; border-left:3px solid ${isSuspicious ? 'var(--danger-color)' : 'var(--success-color)'}; font-size:0.8rem; display:flex; justify-content:space-between; align-items:center;">
+                        <div onclick="openProsecutorDossier('${u.username}')" style="cursor:pointer; flex:1;">
+                            <div><b>@${u.username}</b> <span style="color:var(--star-color);">[${u.title || "Vatandaş"}]</span> ${isSuspicious ? '<span style="color:red; font-weight:bold;">⚠️ ŞÜPHELİ</span>' : ''}</div>
+                            <div style="color:#cbd5e1; margin-top:2px;">Gmail: ${maskedEmail} | Yatırılan: ⭐${u.totalDeposited || 0} <span style="color:var(--accent-color); text-decoration:underline;">(İncele)</span></div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderAdminSalaryManagement() {
+            let listEl = document.getElementById('admin-salary-management-list');
+            listEl.innerHTML = '';
+            data.users.forEach((u, idx) => {
+                let currentSalary = u.salary !== undefined ? u.salary : 30;
+                let title = u.title || "Vatandaş";
+                listEl.innerHTML += `
+                    <div style="background:rgba(0,0,0,0.3); padding:8px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem;">
+                        <div><b>@${u.username}</b> <span style="color:var(--star-color);">[${title}]</span></div>
+                        <div style="display:flex; gap:4px; align-items:center;">
+                            <input type="number" id="salary-input-${idx}" value="${currentSalary}" style="width:70px; padding:4px; font-size:0.75rem;">
+                            <button onclick="updateUserSalary('${u.username}', ${idx})" style="background:var(--success-color); color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:0.7rem;">Güncelle</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function updateUserSalary(username, idx) {
+            if(!hasPermission('salary') && !isCEO()) return showToast("Yetkiniz yok!", "❌");
+            let val = parseFloat(document.getElementById(`salary-input-${idx}`).value) || 0;
+            let user = data.users.find(u => u.username === username);
+            if(user) {
+                user.salary = val;
+                saveData();
+                showToast(`@${username} maaşı ${val} ⭐ oldu.`, "💰");
+            }
+        }
+
+        function adminAddEvent() {
+            if(!hasPermission('events') && !isCEO()) return showToast("Yetkiniz yok!", "❌");
+            let title = document.getElementById('adm-ev-title').value.trim();
+            let desc = document.getElementById('adm-ev-desc').value.trim();
+            let reward = parseFloat(document.getElementById('adm-ev-reward').value) || 2.0;
+            let img = document.getElementById('adm-ev-img').value.trim();
+            if(!title || !desc) return showToast("Başlık ve açıklama girin!", "⚠️");
+
+            data.events.push({ id: Date.now(), title, desc, reward, img: img || "" });
+            saveData();
+            showToast("Yeni etkinlik eklendi!", "🎉");
+            document.getElementById('adm-ev-title').value = '';
+            document.getElementById('adm-ev-desc').value = '';
+            document.getElementById('adm-ev-reward').value = '2.0';
+            document.getElementById('adm-ev-img').value = '';
+            renderAdminEventsManagement();
+            renderEventsList();
+        }
+
+        function adminDeleteEvent(id) {
+            if(!hasPermission('events') && !isCEO()) return showToast("Yetkiniz yok!", "❌");
+            if(!confirm("Etkinliği silmek istiyor musun?")) return;
+            data.events = data.events.filter(e => e.id !== id);
+            saveData();
+            renderAdminEventsManagement();
+            renderEventsList();
+            showToast("Etkinlik silindi.", "🗑️");
+        }
+
+        function renderAdminEventsManagement() {
+            let listEl = document.getElementById('admin-events-management-list');
+            listEl.innerHTML = '';
+            if(data.events.length === 0) {
+                listEl.innerHTML = `<p style="font-size:0.75rem; color:#64748b;">Kayıtlı etkinlik yok.</p>`;
+                return;
+            }
+            data.events.forEach(ev => {
+                listEl.innerHTML += `
+                    <div style="background:rgba(0,0,0,0.3); padding:8px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:0.8rem; color:#fff;">${ev.title} (⭐${ev.reward})</span>
+                        <button onclick="adminDeleteEvent(${ev.id})" style="background:var(--danger-color); color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:0.7rem; cursor:pointer;">Sil</button>
+                    </div>
+                `;
+            });
+        }
+
+        function adminSaveUserPermissions() {
+            if(!hasPermission('permissions') && !isCEO()) return showToast("Yetkiniz yok!", "❌");
+            let targetUser = document.getElementById('adm-target-user').value.trim();
+            let newTitle = document.getElementById('adm-target-title').value.trim();
+            if(!targetUser) return showToast("Kullanıcı adı girin!", "⚠️");
+
+            let user = data.users.find(u => u.username === targetUser);
+            if(!user) return showToast("Kullanıcı bulunamadı!", "❌");
+
+            if(newTitle) user.title = newTitle;
+
+            let selectedPerms = [];
+            let checkboxes = document.querySelectorAll('#perm-checkboxes-box input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                if(cb.checked) selectedPerms.push(cb.value);
+            });
+
+            user.permissions = selectedPerms;
+            saveData();
+            showToast(`İzinler ve unvan güncellendi!`, "🛡️");
+            renderAdminUsersManagement();
+            renderAdminSalaryManagement();
+        }
+
+        function selectUserForPermissionEdit(username) {
+            document.getElementById('adm-target-user').value = username;
+            let user = data.users.find(u => u.username === username);
+            document.getElementById('adm-target-title').value = (user && user.title) ? user.title : "";
+            let perms = (user && user.permissions) ? user.permissions : [];
+            
+            let checkboxes = document.querySelectorAll('#perm-checkboxes-box input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = perms.includes(cb.value);
+            });
+        }
+
+        function adminBanUser() {
+            if(!hasPermission('permissions') && !isCEO()) return showToast("Yetkiniz yok!", "❌");
+            let targetUser = document.getElementById('adm-target-user').value.trim();
+            if(!targetUser) return showToast("Kullanıcı adı girin!", "⚠️");
+            if(targetUser === "ruzgar_ay") return showToast("CEO yasaklanamaz!", "🚫");
+
+            let user = data.users.find(u => u.username === targetUser);
+            if(!user) return showToast("Kullanıcı bulunamadı!", "❌");
+
+            user.banned = true;
+            saveData();
+            showToast(`"${targetUser}" yasaklandı!`, "🚫");
+            renderAdminUsersManagement();
+        }
+
+        function renderAdminUsersManagement() {
+            let listEl = document.getElementById('admin-users-management-list');
+            listEl.innerHTML = '';
+            data.users.forEach(u => {
+                let title = u.title || "Vatandaş";
+                listEl.innerHTML += `
+                    <div style="background:rgba(0,0,0,0.3); padding:8px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem;">
+                        <div><b>${u.username}</b> <span style="color:var(--star-color);">[${title}]</span> ${u.banned ? '<span style="color:red;">(Yasaklı)</span>' : ''}</div>
+                        <button onclick="selectUserForPermissionEdit('${u.username}')" style="background:rgba(255,255,255,0.1); color:#fff; border:none; padding:3px 6px; border-radius:4px; cursor:pointer;">Düzenle</button>
+                    </div>
+                `;
+            });
+        }
+
+        function distributeRankBasedSalaries() {
+            if(!hasPermission('salary') && !isCEO()) return showToast("Yetkiniz yok!", "❌");
+            if(!confirm("Maaşlar hesaplara dağıtılsın mı?")) return;
+            let count = 0;
+            data.users.forEach(u => {
+                let salary = u.salary !== undefined ? u.salary : 30;
+                u.userStars = (u.userStars || 0) + salary;
+                count++;
+            });
+            saveData();
+            showToast(`${count} personelin maaşı yatırıldı!`, "💸");
+        }
+
+        function sendManualBonus() {
+            if(!hasPermission('salary') && !isCEO()) return showToast("Yetkiniz yok!", "❌");
+            let targetUser = document.getElementById('manual-bonus-user').value.trim();
+            let bonusAmt = parseFloat(document.getElementById('manual-bonus-amount').value) || 0;
+            if(!targetUser || bonusAmt <= 0) return showToast("Kullanıcı ve miktar girin!", "⚠️");
+            showToast(`"${targetUser}" kullanıcısına ${bonusAmt} ⭐ prim gönderildi!`, "🎯");
+            document.getElementById('manual-bonus-user').value = '';
+        }
+
+        function adminAddAnnouncement() {
+            if(!hasPermission('announcements') && !isCEO()) return showToast("Yetkiniz yok!", "❌");
+            let text = document.getElementById('adm-ann-text').value.trim();
+            if(!text) return showToast("Metin girin!", "⚠️");
+            data.announcements.push({ id: Date.now(), text, limit: 5, shownCount: 0 });
+            saveData();
+            showToast("Duyuru yayınlandı!", "📢");
+            document.getElementById('adm-ann-text').value = '';
+            renderAdminAnnouncementsManagement();
+            renderHomeDashboard();
+            checkAndShowPopupAd();
+        }
+
+        function adminDeleteAnnouncement(id) {
+            if(!hasPermission('announcements') && !isCEO()) return showToast("Yetkiniz yok!", "❌");
+            if(!confirm("Duyuruyu silmek istiyor musun?")) return;
+            data.announcements = data.announcements.filter(a => a.id !== id);
+            saveData();
+            renderAdminAnnouncementsManagement();
+            renderHomeDashboard();
+            closeFullscreenAnnouncement();
+            showToast("Duyuru silindi.", "🗑️");
+        }
+
+        function renderAdminAnnouncementsManagement() {
+            let listEl = document.getElementById('admin-announcements-management-list');
+            if(!listEl) return;
+            listEl.innerHTML = '';
+            if(data.announcements.length === 0) {
+                listEl.innerHTML = `<p style="font-size:0.75rem; color:#64748b;">Aktif duyuru yok.</p>`;
+                return;
+            }
+            data.announcements.forEach(ann => {
+                listEl.innerHTML += `
+                    <div style="background:rgba(0,0,0,0.3); padding:8px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:0.8rem; color:#fff; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">📢 ${ann.text}</span>
+                        <button onclick="adminDeleteAnnouncement(${ann.id})" style="background:var(--danger-color); color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:0.7rem; cursor:pointer; margin-left:6px;">Sil</button>
+                    </div>
+                `;
+            });
+        }
+
+        function adminAddCrypto() {
+            if(!hasPermission('crypto') && !isCEO()) return showToast("Yetkiniz yok!", "❌");
+            let name = document.getElementById('adm-crypto-name').value.trim();
+            let price = parseFloat(document.getElementById('adm-crypto-price').value) || 150;
+            let desc = document.getElementById('adm-crypto-desc').value.trim();
+            if(!name) return showToast("İsim girin!", "⚠️");
+            data.cryptos.push({ id: Date.now(), name, price, change: "+%5.00", desc: desc || "Yeni varlık." });
+            saveData();
+            showToast("Yeni varlık eklendi!", "🪙");
+            renderCryptoList();
+            document.getElementById('adm-crypto-name').value = '';
+            document.getElementById('adm-crypto-price').value = '150';
+            document.getElementById('adm-crypto-desc').value = '';
+        }
+
+        function goBack() {
+            if(liveChartTimer) clearInterval(liveChartTimer);
+            if(starFallInterval) clearInterval(starFallInterval);
+            document.getElementById('screen-detail').classList.remove('active');
+            document.getElementById('screen-admin').classList.remove('active');
+            document.getElementById('screen-main').classList.add('active');
+            renderCryptoList();
+            renderEventsList();
+        }
+
+        function saveData() { localStorage.setItem('app_data_v77', JSON.stringify(data)); }
+    </script>
+</body>
+</html>
